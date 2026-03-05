@@ -191,29 +191,30 @@ If the user runs `/sdlc doctor --init`, or if `.claude/sdlc.local.md` is missing
 ```yaml
 ---
 spec_dir: docs/specs
+evidence_dir: evidence
 gates:
-  gate_1_spec_quality:
-    threshold: 3.5
+  spec-quality:
+    threshold: 7.0
     required: true
-  gate_2_implementation:
-    threshold: 3.5
+  code-quality:
+    tests_required: true
+    coverage_threshold: 80
     required: true
-  gate_3_code_review:
-    threshold: 3.5
+  review:
     required: true
-  gate_4_close:
+  evidence-package:
     required: true
 scoring:
   weights:
-    completeness: 0.25
-    clarity: 0.25
-    feasibility: 0.25
-    testability: 0.25
+    completeness: 0.34
+    clarity: 0.33
+    testability: 0.33
 ---
 
-# SDLC Local Configuration
+# SDLC Plugin — Project Configuration
 
-Project-specific overrides for the agentic-sdlc plugin.
+This file configures the agentic-sdlc plugin for this project.
+Edit the YAML frontmatter above to adjust thresholds and paths.
 ```
 
 2. Create the spec directory: `mkdir -p docs/specs`
