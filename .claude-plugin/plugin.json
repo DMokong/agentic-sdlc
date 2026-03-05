@@ -1,5 +1,13 @@
 {
   "name": "agentic-sdlc",
-  "version": "0.1.0",
-  "description": "Agentic SDLC quality gates — enforces spec quality, code quality, review, and evidence collection via a 4-gate pipeline with LLM-as-judge scoring."
+  "version": "1.0.0",
+  "description": "Agentic SDLC quality gates — 4-gate pipeline with LLM-as-judge scoring, git worktree isolation, and beads issue tracking.",
+  "author": {
+    "name": "Dustin Cheng",
+    "url": "https://github.com/DMokong"
+  },
+  "repository": "https://github.com/DMokong/agentic-sdlc",
+  "homepage": "https://github.com/DMokong/agentic-sdlc",
+  "license": "MIT",
+  "keywords": ["sdlc", "quality-gates", "spec-quality", "code-review", "worktrees", "beads", "llm-as-judge"]
 }
