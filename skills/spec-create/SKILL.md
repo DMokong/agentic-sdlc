@@ -34,30 +34,40 @@ You are helping the user create a new specification document for a piece of work
 4. **Create a worktree for this feature**:
    - **Before creating the worktree**, record the main project's memory path:
      ```bash
+     # Detect the main project's memory directory dynamically
+     # Claude Code keys memory on sanitized absolute path: /a/b/c -> -a-b-c
      MAIN_PROJECT_DIR=$(pwd)
-     MAIN_MEMORY_DIR=$(ls -d ~/.claude/projects/*claudeclaw*/memory 2>/dev/null | head -1)
+     MAIN_SANITIZED=$(echo "$MAIN_PROJECT_DIR" | sed 's|^/||; s|/|-|g; s|^|-|')
+     MAIN_MEMORY_DIR="$HOME/.claude/projects/$MAIN_SANITIZED/memory"
      ```
    - Use the `EnterWorktree` tool with the kebab-case title as the name (e.g., `add-user-auth`)
    - This creates an isolated workspace so multiple features can be in progress simultaneously
    - If the user declines the worktree or it fails, continue on the current branch — worktrees are recommended but not required
 
-5. **Wire up memory in the worktree** (critical — do this immediately after entering the worktree):
+5. **Wire up memory in the worktree** (do this immediately after entering the worktree):
    - Claude Code keys project memory on the absolute working directory path
    - A worktree at a different path gets a *separate, empty* memory directory — losing all context
-   - Fix this by symlinking the worktree's memory to the main project's memory:
+   - Fix this by symlinking the worktree's memory to the main project's memory (if it exists):
      ```bash
-     # Determine the worktree's project memory path
-     # Claude sanitizes paths: /a/b/c → -a-b-c
-     WORKTREE_DIR=$(pwd)
-     SANITIZED=$(echo "$WORKTREE_DIR" | sed 's|^/||; s|/|-|g; s|^|-|')
-     WORKTREE_MEMORY_PARENT="$HOME/.claude/projects/$SANITIZED"
+     if [ -d "$MAIN_MEMORY_DIR" ]; then
+       WORKTREE_DIR=$(pwd)
+       SANITIZED=$(echo "$WORKTREE_DIR" | sed 's|^/||; s|/|-|g; s|^|-|')
+       WORKTREE_MEMORY_PARENT="$HOME/.claude/projects/$SANITIZED"
 
-     # Create symlink to main project's memory
-     mkdir -p "$WORKTREE_MEMORY_PARENT"
-     ln -sfn "$MAIN_MEMORY_DIR" "$WORKTREE_MEMORY_PARENT/memory"
+       mkdir -p "$WORKTREE_MEMORY_PARENT"
+       ln -sfn "$MAIN_MEMORY_DIR" "$WORKTREE_MEMORY_PARENT/memory"
+
+       # Verify
+       if [ -f "$WORKTREE_MEMORY_PARENT/memory/MEMORY.md" ]; then
+         echo "Memory symlinked successfully."
+       else
+         echo "WARNING: Memory symlink created but MEMORY.md not found. Memory may be empty."
+       fi
+     else
+       echo "INFO: No memory directory detected for main project. Skipping memory wiring."
+       echo "This is normal for projects without Claude Code long-term memory configured."
+     fi
      ```
-   - **Verify** the symlink works: `cat "$WORKTREE_MEMORY_PARENT/memory/MEMORY.md" | head -5` — should show the main project's memory content, not empty
-   - If symlinking fails, warn the user: "Memory won't be shared with the main project. Context may be limited in this worktree."
 
 6. **Generate spec ID**: Use the pattern `SPEC-NNN` where NNN is the next available number. Check existing specs in `{spec_dir}/` to determine the next ID.
 
