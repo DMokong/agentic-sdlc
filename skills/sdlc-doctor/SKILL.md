@@ -199,6 +199,10 @@ gates:
   code-quality:
     tests_required: true
     coverage_threshold: 80
+    ac_traceability: false
+    build_required: false
+    lint_required: false
+    type_check_required: false
     required: true
   review:
     required: true
@@ -206,9 +210,12 @@ gates:
     required: true
 scoring:
   weights:
-    completeness: 0.34
-    clarity: 0.33
-    testability: 0.33
+    completeness: 0.25
+    clarity: 0.25
+    testability: 0.25
+    feasibility: 0.15
+    scope: 0.10
+  dimension_minimum: 5
 ---
 
 # SDLC Plugin — Project Configuration
