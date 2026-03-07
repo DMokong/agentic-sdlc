@@ -4,21 +4,29 @@
 gate: spec-quality
 spec_id:                    # e.g. SPEC-042
 spec_path:                  # e.g. docs/specs/add-user-auth/spec.md
-timestamp:                  # ISO 8601, e.g. 2026-03-03T10:30:00Z
+timestamp:                  # ISO 8601
 scorer: llm-as-judge
 model:                      # model that produced this score
 
 scores:
-  completeness:             # 1-10: all required sections present and substantive?
-  clarity:                  # 1-10: unambiguous, two engineers build the same thing?
-  testability:              # 1-10: every AC objectively verifiable?
-  overall:                  # weighted average (see project config for weights)
+  completeness:             # 1-10
+  clarity:                  # 1-10
+  testability:              # 1-10
+  feasibility:              # 1-10 (NEW)
+  scope:                    # 1-10 (NEW)
+  overall:                  # weighted average
 
 threshold:                  # from project config (e.g. 7.0)
+dimension_minimum: 5        # NEW — each dimension must be >= this
 result:                     # pass | fail
 
-flags:                      # list of free-text observations
-  # - "R2: consider specifying exact timeout value"
+flags:
+  blocking:                 # NEW — must be addressed for gate to pass
+    # - "..."
+  recommended:              # NEW — should be addressed
+    # - "..."
+  advisory:                 # NEW — nice to have
+    # - "..."
 
 # Human override (fill in manually if overriding a fail)
 override:
