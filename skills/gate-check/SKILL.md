@@ -43,30 +43,72 @@ You are helping the user verify or run a quality gate for a specification.
 
 ## Gate 2: Collecting Code Quality Evidence
 
-When running Gate 2, help the user:
-1. Identify the project's test command (look at package.json scripts, Makefile, pyproject.toml, etc.)
-2. Run the tests and capture results
-3. Run coverage if configured
-4. Write the evidence artifact to `{spec_dir}/{spec_name}/evidence/gate-2-quality.yml`
+When running Gate 2:
+
+1. **Read the rubric** at `${CLAUDE_PLUGIN_ROOT}/rubrics/code-quality.md` to determine which checks apply and how to evaluate them.
+2. **Read the project config** (`.claude/sdlc.local.md`) to see which checks are enabled. The `gates.code-quality` section controls which checks run.
+3. **AC traceability** (if `ac_traceability` is enabled): Read the spec's acceptance criteria and the rubric at `${CLAUDE_PLUGIN_ROOT}/rubrics/acceptance-criteria.md`. Map each AC to the code/tests that satisfy it.
+4. **Run enabled checks** and collect evidence for each.
+5. **Write combined evidence** to `{spec_dir}/{spec_name}/evidence/gate-2-quality.yml`.
+
+### Available Check Types
+
+The following 7 checks can be configured in `gates.code-quality`:
+
+| Check | Config key | Default | Description |
+|-------|-----------|---------|-------------|
+| AC traceability | `ac_traceability` | `false` | Maps each acceptance criterion to implementing code and tests |
+| Tests pass | `tests_required` | `true` | Runs the project's test suite and verifies all tests pass |
+| Coverage threshold | `coverage_threshold` | `80` | Verifies test coverage meets the configured percentage |
+| Build success | `build_required` | `false` | Verifies the project builds without errors |
+| Lint | `lint_required` | `false` | Runs the project's linter and verifies no errors |
+| Type check | `type_check_required` | `false` | Runs type checking (e.g., tsc, mypy) and verifies no errors |
+| No regressions | *(always on)* | — | Verifies no existing tests broke due to the changes |
+
+Checks marked `false` by default are **optional** — they only run when explicitly enabled in the project config. The "no regressions" check is always performed as part of the test run and cannot be disabled.
 
 ## Gate 3: Collecting Review Evidence
 
 When running Gate 3:
-1. Check if a code review has been done (look for PR review, or ask if manual review happened)
-2. Record the reviewer, date, and outcome
-3. Write evidence to `{spec_dir}/{spec_name}/evidence/gate-3-review.yml`
+
+1. **Read the review rubric** at `${CLAUDE_PLUGIN_ROOT}/rubrics/review.md` and evaluate the implementation against each checklist item.
+2. For each checklist area, assess the code and record findings.
+3. Write evidence to `{spec_dir}/{spec_name}/evidence/gate-3-review.yml` with the following structure:
+
+```yaml
+gate: review
+result: pass | fail
+timestamp: ISO-8601
+checks:
+  correctness: pass | fail
+  error_handling: pass | fail
+  readability: pass | fail
+  security: pass | fail
+  performance: pass | fail
+  spec_alignment: pass | fail
+observations:
+  - "Free-text observations about the implementation"
+blocking_issues:
+  - "Any issues that must be fixed before passing (empty if result is pass)"
+```
 
 ## Gate 4: Evidence Package
 
 When running Gate 4:
-1. Read all prior gate evidence files
-2. Verify all required gates (from project config) have `result: pass`
-3. Write a summary to `{spec_dir}/{spec_name}/evidence/gate-4-summary.yml` containing:
+
+1. **Read the evidence-package rubric** at `${CLAUDE_PLUGIN_ROOT}/rubrics/evidence-package.md` and verify each checklist item.
+2. Read all prior gate evidence files.
+3. Verify all required gates (from project config) have `result: pass`.
+4. **Verify Gate 1 scorecard has no unaddressed blocking flags.** If the scorecard contains blocking flags that were not resolved, the evidence package fails.
+5. **If a beads epic exists for this spec, verify all child stories are closed.** Open stories indicate incomplete work.
+6. Write a summary to `{spec_dir}/{spec_name}/evidence/gate-4-summary.yml` containing:
    - List of all gates with their results
    - Overall pipeline result (pass only if all required gates pass)
    - Timestamp
    - Whether work was done in a worktree (check `git worktree list`)
-4. If all gates pass and we're in a worktree, suggest running `/sdlc close` to merge back to main
+   - Blocking flags status (from Gate 1 scorecard)
+   - Beads epic status (if applicable)
+7. If all gates pass and we're in a worktree, suggest running `/sdlc close` to merge back to main
 
 ## Worktree Awareness
 
