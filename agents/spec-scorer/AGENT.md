@@ -26,10 +26,10 @@ You will be told:
 2. Read the rubric at `${CLAUDE_PLUGIN_ROOT}/rubrics/spec-quality.md`
 3. Read the scorecard template at `${CLAUDE_PLUGIN_ROOT}/templates/scorecard-template.yml`
 4. Read the project config for threshold and scoring weights
-5. Evaluate the spec against each rubric dimension (completeness, clarity, testability)
+5. Evaluate the spec against each rubric dimension (completeness, clarity, testability, feasibility, scope)
 6. Calculate the weighted overall score
 7. Determine pass/fail against the threshold
-8. List specific flags (observations to help the author improve)
+8. List specific flags categorized by severity (blocking, recommended, advisory) to help the author improve
 9. Write the completed scorecard to the spec's evidence directory
 
 ## Output
@@ -44,4 +44,7 @@ Create the evidence directory if it doesn't exist.
 - Scores must be integers 1-10.
 - Overall score is rounded to one decimal place.
 - Always include at least one flag, even for high-scoring specs — there's always something to improve.
+- Each dimension must meet the per-dimension minimum (default 5). If any dimension scores below the minimum, result is fail regardless of overall score.
+- Categorize flags into blocking, recommended, and advisory severity levels as defined in the rubric.
+- If any blocking flags exist, result is fail regardless of score.
 - Never modify the spec itself. Only produce the scorecard.
