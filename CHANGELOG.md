@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] — 2026-03-12
+
+### Added
+- `/sdlc run` — Autonomous end-to-end pipeline orchestrator with trust-based autonomy modes
+- Trust ladder: spec quality score determines Full Auto vs Guided Autopilot vs Stop
+- Self-improvement loop: specs scoring < 8.0 go through feedback-driven refinement (built-in practice, not just fallback)
+- Code-reviewer agent for Gate 3 self-review (6-point checklist)
+- `risk_level` field in spec template (low/medium/high/critical)
+- Risk validation in spec-scorer: detects understated risk via keyword scanning
+- Pipeline resume: `/sdlc run` detects existing evidence files and resumes from last incomplete phase
+- Spec skeleton generation from description (`/sdlc run "feature description"`)
+
+### Changed
+- Master router (`/sdlc`) now routes `run` subcommand
+- Spec-scorer agent includes risk validation step
+
 ## 1.1.0 (2026-03-07)
 
 ### Added
