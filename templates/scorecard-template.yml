@@ -12,8 +12,9 @@ scores:
   completeness:             # 1-10
   clarity:                  # 1-10
   testability:              # 1-10
-  feasibility:              # 1-10 (NEW)
-  scope:                    # 1-10 (NEW)
+  intent_verifiability:     # 1-10: intent captured, anti-patterns documented, user journeys addressed?
+  feasibility:              # 1-10
+  scope:                    # 1-10
   overall:                  # weighted average
 
 threshold:                  # from project config (e.g. 7.0)

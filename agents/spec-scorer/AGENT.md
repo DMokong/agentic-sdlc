@@ -26,7 +26,7 @@ You will be told:
 2. Read the rubric at `${CLAUDE_PLUGIN_ROOT}/rubrics/spec-quality.md`
 3. Read the scorecard template at `${CLAUDE_PLUGIN_ROOT}/templates/scorecard-template.yml`
 4. Read the project config for threshold and scoring weights
-5. Evaluate the spec against each rubric dimension (completeness, clarity, testability, feasibility, scope)
+5. Evaluate the spec against each rubric dimension (completeness, clarity, testability, intent_verifiability, feasibility, scope)
 6. Calculate the weighted overall score
 7. Determine pass/fail against the threshold
 8. List specific flags categorized by severity (blocking, recommended, advisory) to help the author improve

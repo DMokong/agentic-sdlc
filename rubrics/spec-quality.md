@@ -219,19 +219,71 @@ Out-of-scope is precise and justified. No gold-plating, no padding.
 
 ---
 
+## Intent Verifiability (1-10)
+
+Does the spec capture the underlying purpose and protect against implementations that meet the letter but miss the spirit?
+
+- **1-3 (Poor):** No stated purpose beyond "build X." Requirements describe behavior without explaining why. No anti-patterns or rejected approaches. Success criteria are purely behavioral ("button does X") with no connection to outcomes. Critical user journeys not considered. An autonomous agent could satisfy every AC while completely missing the point.
+- **4-6 (Adequate):** Problem statement implies purpose but doesn't state it explicitly. Some requirements hint at underlying intent. No anti-patterns documented. Success criteria mix behavioral and outcome-oriented. Critical user journeys mentioned but not traced through requirements.
+- **7-8 (Good):** Purpose clearly stated — "we're solving X because Y." Anti-patterns or rejected approaches documented (what NOT to do). Success criteria tied to outcomes, not just surface behavior. Critical user journeys identified and their key touchpoints covered by requirements. Harder for an implementation to game — meeting the spec likely means meeting the intent.
+- **9-10 (Excellent):** Crystal clear intent that would survive context loss. Anti-patterns with reasoning ("don't do X because it leads to Y"). Success criteria explicitly distinguish between "letter" and "spirit" compliance. Critical user journeys traced end-to-end with specific acceptance criteria at each touchpoint. A future developer reading this spec would understand not just what to build but what problem they're solving and what failure looks like even when all tests pass.
+
+### Calibration Examples
+
+**Score 2-3:**
+```
+Problem Statement: Build an email triage system.
+Requirements:
+- Sort emails into categories
+- Mark important emails
+- Show results in Slack
+(No stated purpose. Why triage? What outcome? No anti-patterns. "Important" is undefined.)
+```
+
+**Score 5-6:**
+```
+Problem Statement: Build an email triage system to reduce time spent on email.
+Requirements:
+- Categorize emails by urgency (high/medium/low)
+- Post high-urgency emails to #cc-email within 5 minutes
+(Purpose implied but vague — "reduce time" by how much? No anti-patterns. No user journey.)
+```
+
+**Score 7-8:**
+```
+Problem Statement: Dustin spends 45min/day on email. Goal: reduce to <10min by auto-categorizing and surfacing only actionable items.
+Anti-patterns: Don't auto-archive — user must see everything was triaged. Don't use subject-line-only classification (body context matters).
+Critical user journey: Morning check — user opens Slack, sees categorized digest, acts on high-urgency items, trusts that nothing was silently dropped.
+```
+
+**Score 9-10:**
+```
+Problem Statement: [as above, plus:]
+Intent: The system succeeds when Dustin trusts it enough to stop checking email directly. Failure looks like: all ACs pass, but Dustin still opens Gmail "just in case."
+Anti-patterns: (1) Don't auto-archive (user must verify completeness). (2) Don't batch — latency >5min for high-urgency defeats the purpose. (3) Don't classify based on sender alone (new contacts can be urgent).
+Critical user journeys:
+- Morning brief: digest in #cc-email by 7am, categorized, with confidence indicators
+- Urgent interrupt: high-urgency email → immediate Slack DM, not just channel post
+- Weekly audit: user spot-checks 10 random emails to validate classification accuracy
+Each journey traced to specific ACs (AC1→morning brief, AC2→urgent interrupt, AC5→audit).
+```
+
+---
+
 ## Scoring
 
 ### Default Weights
 
 Calculate overall score as a weighted average using the weights from the project's `.claude/sdlc.local.md` configuration. Default weights:
 
-| Dimension    | Weight |
-|-------------|--------|
-| Completeness | 0.25   |
-| Clarity      | 0.25   |
-| Testability  | 0.25   |
-| Feasibility  | 0.15   |
-| Scope        | 0.10   |
+| Dimension             | Weight |
+|----------------------|--------|
+| Completeness          | 0.20   |
+| Clarity               | 0.20   |
+| Testability           | 0.20   |
+| Intent Verifiability  | 0.15   |
+| Feasibility           | 0.15   |
+| Scope                 | 0.10   |
 
 Round the overall score to one decimal place.
 

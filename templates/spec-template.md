@@ -22,6 +22,17 @@ What problem does this solve? Why now?
 - [ ] AC1: Given [precondition], when [action], then [expected result]
 - [ ] AC2: Given [precondition], when [action], then [expected result]
 
+## Intent & Anti-Patterns
+
+Why does this feature exist? What outcome matters beyond the surface behavior?
+
+### Anti-Patterns
+- What approaches should be explicitly avoided?
+- What would "meeting the letter but missing the spirit" look like?
+
+### Critical User Journeys
+- What user journeys must this feature support or not break?
+
 ## Constraints
 
 ## Out of Scope
