@@ -31,21 +31,36 @@ claude plugin install speculator@dmokong-plugins --scope project
 
 ## Quick Start
 
-```bash
-/spec doctor    # verify environment is healthy
-/spec start     # create spec + worktree + beads epic
-# fill in the spec...
-/spec score     # Gate 1: automated spec quality scoring
-/spec implement # create plan + beads stories + execute
-/spec review    # Gate 3: code review
-/spec close     # Gate 4: evidence package + merge to main
-```
-
-**Or run it all at once:**
+### Step by step
 
 ```bash
-/spec run     # autonomous: score → plan → implement → review → merge
+/spec doctor              # verify environment is healthy
+/spec start               # create spec + worktree + beads epic
 ```
+
+Now **brainstorm before you spec.** Use Claude's [brainstorming skill](https://github.com/obra/superpowers) to explore intent, clarify requirements, and design your approach — before committing anything to the spec. The brainstorm is where ambiguity dies and intent crystallizes.
+
+```bash
+# brainstorm your feature (Superpowers skill)
+# → explores intent, asks clarifying questions, proposes approaches with trade-offs
+# → produces a design-approved plan ready to be formalized
+
+/spec create              # Speculator turns your brainstormed plan into a formal spec.md
+/spec score               # Gate 1: automated spec quality scoring
+/spec implement           # create plan + beads stories + execute
+/spec review              # Gate 3: code review
+/spec close               # Gate 4: evidence package + merge to main
+```
+
+### One command
+
+Give `/spec run` a brainstormed plan and it handles everything — creates the spec, scores it, improves it, implements it, reviews it, and merges it:
+
+```bash
+/spec run     # autonomous: create → score → improve → implement → review → merge
+```
+
+This is designed to scale across multiple agents. Each agent gets a brainstormed plan, runs `/spec run` in its own worktree, and delivers a quality-gated feature independently.
 
 > Both `/spec` and `/sdlc` prefixes work — they're equivalent.
 
@@ -53,7 +68,7 @@ claude plugin install speculator@dmokong-plugins --scope project
 
 Here's what it actually looks like to build a feature with Speculator.
 
-### 1. Start a new feature
+### 1. Start and brainstorm
 
 ```
 You: /spec start
@@ -67,12 +82,43 @@ Speculator: Created:
   ✅ Worktree: .claude/worktrees/webhook-notifications/
   ✅ Epic: beads-a3f "Webhook notification system"
 
-  Switched to worktree. Fill in the spec, then run /spec score.
+  Switched to worktree. Brainstorm your design, then run /spec create.
+```
+
+Now brainstorm. This is where the real work happens — before a single line of spec is written:
+
+```
+You: I want to add webhooks for order events. Let's brainstorm.
+
+Claude: [explores intent] What's the main use case — are these for internal
+        microservices, external integrations, or both?
+
+You: External integrations. Third-party apps need to react to order changes.
+
+Claude: [clarifying questions] A few things to nail down:
+        • Which order events? Created, updated, cancelled, fulfilled?
+        • Retry semantics — how many retries, what backoff?
+        • Security — do we need payload signing?
+        • Rate limiting per consumer?
+
+You: All four events. Retry with backoff, yes signing, yes rate limiting.
+
+Claude: [proposes approach] Here's what I'd recommend...
+        [presents design with trade-offs, gets approval]
+```
+
+Once the brainstorm produces a clear, approved design:
+
+```
+You: /spec create
+
+Speculator: Building spec from brainstorm context...
+  ✅ docs/specs/webhook-notifications/spec.md populated
 ```
 
 ### 2. Score the spec
 
-After writing your spec, run `/spec score`. The scorer evaluates 6 dimensions:
+With the spec formalized, run `/spec score`. The scorer evaluates 6 dimensions:
 
 ```
 You: /spec score
