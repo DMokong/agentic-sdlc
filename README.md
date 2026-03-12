@@ -24,28 +24,30 @@ claude plugin marketplace add DMokong/claude-plugins
 claude plugin install speculator@dmokong-plugins --scope project
 
 # Bootstrap your project
-/sdlc doctor --init
+/spec doctor --init
 ```
 
-`/sdlc doctor --init` will create a default `.claude/sdlc.local.md` config, verify prerequisites, and register the pre-commit hook.
+`/spec doctor --init` will create a default `.claude/sdlc.local.md` config, verify prerequisites, and register the pre-commit hook.
 
 ## Quick Start
 
 ```bash
-/sdlc doctor    # verify environment is healthy
-/sdlc start     # create spec + worktree + beads epic
+/spec doctor    # verify environment is healthy
+/spec start     # create spec + worktree + beads epic
 # fill in the spec...
-/sdlc score     # Gate 1: automated spec quality scoring
-/sdlc implement # create plan + beads stories + execute
-/sdlc review    # Gate 3: code review
-/sdlc close     # Gate 4: evidence package + merge to main
+/spec score     # Gate 1: automated spec quality scoring
+/spec implement # create plan + beads stories + execute
+/spec review    # Gate 3: code review
+/spec close     # Gate 4: evidence package + merge to main
 ```
 
 **Or run it all at once:**
 
 ```bash
-/sdlc run     # autonomous: score → plan → implement → review → merge
+/spec run     # autonomous: score → plan → implement → review → merge
 ```
+
+> Both `/spec` and `/sdlc` prefixes work — they're equivalent.
 
 ## Gate Pipeline
 
@@ -60,24 +62,24 @@ Each gate produces a YAML evidence artifact in `docs/specs/{feature}/evidence/`.
 
 | Command | Description |
 |---------|-------------|
-| `/sdlc start` | Create spec from template + git worktree + beads epic |
-| `/sdlc score` | Gate 1: LLM-as-judge spec quality scoring (6 dimensions) |
-| `/sdlc implement` | Create implementation plan + beads stories + execute tasks |
-| `/sdlc gate` | Check or run any specific gate |
-| `/sdlc review` | Gate 3: Automated code review |
-| `/sdlc close` | Gate 4: Evidence package + merge worktree to main |
-| `/sdlc run [args]` | Run the full pipeline autonomously (trust-based oversight) |
-| `/sdlc status` | Cross-worktree pipeline view (all features at a glance) |
-| `/sdlc doctor` | Diagnostics + auto-fix (prereqs, config, hooks) |
+| `/spec start` | Create spec from template + git worktree + beads epic |
+| `/spec score` | Gate 1: LLM-as-judge spec quality scoring (6 dimensions) |
+| `/spec implement` | Create implementation plan + beads stories + execute tasks |
+| `/spec gate` | Check or run any specific gate |
+| `/spec review` | Gate 3: Automated code review |
+| `/spec close` | Gate 4: Evidence package + merge worktree to main |
+| `/spec run [args]` | Run the full pipeline autonomously (trust-based oversight) |
+| `/spec status` | Cross-worktree pipeline view (all features at a glance) |
+| `/spec doctor` | Diagnostics + auto-fix (prereqs, config, hooks) |
 
-## `/sdlc run` — Autonomous Pipeline
+## `/spec run` — Autonomous Pipeline
 
-`/sdlc run` chains the full pipeline in a single invocation, using a trust-based autonomy model:
+`/spec run` chains the full pipeline in a single invocation, using a trust-based autonomy model:
 
 ```
-/sdlc run                    # auto-detect spec, resume from last checkpoint
-/sdlc run "add email snooze" # generate spec skeleton, then run pipeline
-/sdlc run SPEC-042           # target a specific spec by ID
+/spec run                    # auto-detect spec, resume from last checkpoint
+/spec run "add email snooze" # generate spec skeleton, then run pipeline
+/spec run SPEC-042           # target a specific spec by ID
 ```
 
 ### Trust Ladder
@@ -158,7 +160,7 @@ scoring:
     scope: 0.10
   dimension_minimum: 5     # any dimension below this fails the gate
 
-# /sdlc run autonomy thresholds
+# /spec run autonomy thresholds
 run:
   self_improvement_trigger: 8.0  # score below this triggers refinement loop
   full_auto_threshold: 7.8       # minimum score for autonomous execution
@@ -178,13 +180,13 @@ run:
 ```
 speculator/
 ├── skills/
-│   ├── sdlc/SKILL.md         # Master orchestrator (routes /sdlc subcommands)
-│   ├── spec-create/SKILL.md  # /sdlc start -- spec + worktree + beads epic
-│   ├── spec-score/SKILL.md   # /sdlc score -- Gate 1 via spec-scorer agent
-│   ├── gate-check/SKILL.md   # /sdlc gate -- check/run any gate
-│   ├── sdlc-run/SKILL.md     # /sdlc run -- autonomous pipeline orchestrator
-│   ├── sdlc-status/SKILL.md  # /sdlc status -- cross-worktree pipeline view
-│   └── sdlc-doctor/SKILL.md  # /sdlc doctor -- diagnostics + auto-fix
+│   ├── sdlc/SKILL.md         # Master orchestrator (routes /spec subcommands)
+│   ├── spec-create/SKILL.md  # /spec start -- spec + worktree + beads epic
+│   ├── spec-score/SKILL.md   # /spec score -- Gate 1 via spec-scorer agent
+│   ├── gate-check/SKILL.md   # /spec gate -- check/run any gate
+│   ├── sdlc-run/SKILL.md     # /spec run -- autonomous pipeline orchestrator
+│   ├── sdlc-status/SKILL.md  # /spec status -- cross-worktree pipeline view
+│   └── sdlc-doctor/SKILL.md  # /spec doctor -- diagnostics + auto-fix
 ├── agents/
 │   ├── spec-scorer/AGENT.md  # LLM-as-judge subagent for spec evaluation
 │   └── code-reviewer/AGENT.md  # Gate 3 code review subagent (6-point checklist)
@@ -207,7 +209,7 @@ speculator/
 
 ## Worktree Isolation
 
-Each feature gets its own git worktree via `/sdlc start`:
+Each feature gets its own git worktree via `/spec start`:
 
 ```
 your-project/                              # main worktree
@@ -219,18 +221,18 @@ your-project/.claude/worktrees/
 - Multiple features can be in progress simultaneously (separate Claude Code sessions)
 - Memory is symlinked so all worktrees share the same project memory
 - Specs, evidence, and implementation code are conflict-safe (unique per feature)
-- `/sdlc close` guides merging back to main
+- `/spec close` guides merging back to main
 
 ### Cross-Worktree Awareness
 
-All skills detect when you're on main but specs live in worktrees. They'll prompt you to redirect to the correct worktree before operating. `/sdlc status` shows specs from ALL workspaces in one view.
+All skills detect when you're on main but specs live in worktrees. They'll prompt you to redirect to the correct worktree before operating. `/spec status` shows specs from ALL workspaces in one view.
 
 ## Beads Integration
 
 The SDLC lifecycle is tracked via beads issues for full traceability:
 
 ```
-Epic (created by /sdlc start)
+Epic (created by /spec start)
   └── Spec (docs/specs/{name}/spec.md)
        └── Scorecard (evidence/gate-1-scorecard.yml)
        └── Plan (docs/plans/YYYY-MM-DD-{name}.md)
@@ -238,9 +240,9 @@ Epic (created by /sdlc start)
             └── Story N (beads) -> Task N in plan
 ```
 
-- `/sdlc start` creates the epic
-- `/sdlc implement` creates user stories from the plan
-- `/sdlc close` closes all stories + epic
+- `/spec start` creates the epic
+- `/spec implement` creates user stories from the plan
+- `/spec close` closes all stories + epic
 
 Every gate artifact links back to the beads issue, creating a traceable chain from requirement to merged code.
 
@@ -248,7 +250,7 @@ Every gate artifact links back to the beads issue, creating a traceable chain fr
 
 When a skill needs to identify which spec to operate on, it follows this order:
 
-1. **Explicit user selection** -- `/sdlc score add-user-auth`
+1. **Explicit user selection** -- `/spec score add-user-auth`
 2. **Worktree affinity** -- worktree name matches spec directory
 3. **Cross-worktree redirect** -- on main, scan worktrees for specs
 4. **Lock file check** -- skip specs locked by other sessions
