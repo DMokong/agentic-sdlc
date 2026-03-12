@@ -49,6 +49,120 @@ claude plugin install speculator@dmokong-plugins --scope project
 
 > Both `/spec` and `/sdlc` prefixes work — they're equivalent.
 
+## Example: A Feature From Start to Finish
+
+Here's what it actually looks like to build a feature with Speculator.
+
+### 1. Start a new feature
+
+```
+You: /spec start
+
+Speculator: What feature are you building?
+
+You: Add a webhook notification system for order events
+
+Speculator: Created:
+  ✅ Spec: docs/specs/webhook-notifications/spec.md
+  ✅ Worktree: .claude/worktrees/webhook-notifications/
+  ✅ Epic: beads-a3f "Webhook notification system"
+
+  Switched to worktree. Fill in the spec, then run /spec score.
+```
+
+### 2. Score the spec
+
+After writing your spec, run `/spec score`. The scorer evaluates 6 dimensions:
+
+```
+You: /spec score
+
+Speculator: Scoring docs/specs/webhook-notifications/spec.md...
+
+  📊 Gate 1: Spec Quality Scorecard
+
+  Completeness ............ 8  All sections present, requirements traced to ACs
+  Clarity ................. 7  "events should be configurable" — which events? Be specific
+  Testability ............. 6  AC3 says "retry failed deliveries" but no max retry count
+                               or backoff strategy defined — not objectively verifiable
+  Intent Verifiability .... 8  Anti-patterns documented, user journeys traced
+  Feasibility ............. 7  No mention of webhook signing — security dependency missing
+  Scope ................... 9  Tightly scoped to order events only
+
+  Overall: 7.3 — PASS (threshold: 7.0)
+
+  ⚠️ Recommended:
+  • Clarify which order events are supported (created, updated, cancelled?)
+  • Add max retry count and backoff strategy to AC3
+  • Address webhook payload signing for security
+
+  The spec passes, but I'd recommend addressing the flags before
+  implementation. Want me to help revise?
+```
+
+### 3. Self-improvement in action
+
+If the score is below 8.0, the self-improvement loop engages automatically during `/spec run`:
+
+```
+Speculator: Score 7.3 is below self-improvement trigger (8.0).
+            Engaging self-improvement loop...
+
+  Round 1: Addressing scorer feedback...
+  • Added explicit event list: order.created, order.updated, order.cancelled
+  • AC3 now specifies: max 5 retries, exponential backoff (1s, 2s, 4s, 8s, 16s)
+  • Added R6: webhook payload signing with HMAC-SHA256
+  • Added AC7: signature verification endpoint in docs
+
+  Re-scoring...
+
+  Overall: 8.1 — PASS (improved from 7.3)
+  ✅ Self-improvement complete. Proceeding to Full Auto mode.
+```
+
+The requirements didn't change. The spec just got *better* by being measured.
+
+### 4. The full autonomous run
+
+For well-scored specs, `/spec run` handles everything:
+
+```
+You: /spec run
+
+Speculator: Detected spec: webhook-notifications (score: 8.1, Full Auto)
+
+  ▸ Gate 1: Spec Quality .............. ✅ 8.1 (passed)
+  ▸ Planning .......................... ✅ 6 tasks created
+  ▸ Implementation .................... ✅ All tasks complete
+  ▸ Gate 2: Code Quality .............. ✅ Tests pass, 87% coverage
+  ▸ Gate 3: Code Review ............... ✅ No blocking findings
+  ▸ Gate 4: Evidence Package .......... ✅ All artifacts present
+
+  Ready to merge. Run /spec close to finalize.
+```
+
+### 5. When things go wrong
+
+Not every spec sails through. Here's what a stopped pipeline looks like:
+
+```
+You: /spec run "add payment processing"
+
+Speculator: Scoring spec...
+
+  Overall: 5.8 — FAIL (threshold: 7.0)
+
+  🚫 Blocking:
+  • risk_mismatch: Spec mentions "payment" and "charge" but risk_level
+    is set to "low". Payment processing is at minimum "high" risk.
+  • intent_verifiability: 4 (below minimum 8). No anti-patterns
+    documented for a payment feature — what happens on double-charge?
+    What does "refund" mean (full, partial, credit)?
+
+  ⚠️ Pipeline stopped. This spec needs human rework before it can
+  proceed. Address the blocking flags and run /spec score again.
+```
+
 ## Gate Pipeline
 
 ```
