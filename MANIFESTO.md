@@ -72,7 +72,7 @@ The industry has a spec quality problem and no spec quality metric.
 
 So we built one.
 
-Speculator (currently published as [agentic-sdlc](https://github.com/DMokong/agentic-sdlc), being renamed) evaluates feature specifications using an LLM-as-judge rubric with six weighted dimensions:
+[Speculator](https://github.com/DMokong/speculator) evaluates feature specifications using an LLM-as-judge rubric with six weighted dimensions:
 
 | Dimension | Weight | What It Catches |
 |-----------|--------|-----------------|
@@ -99,7 +99,7 @@ Which brings me to the result that convinced me this works.
 
 During the first end-to-end pipeline run of Speculator's autonomous mode (SPEC-011), the spec-scorer agent assessed the spec at 7.7. Not bad — above the implementation threshold. But the self-improvement loop engaged anyway: structured feedback identified threshold inconsistencies, missing acceptance criteria detail, and user journey gaps. After revision — without changing the core requirements, without altering what the feature *does* — the spec scored 8.4.
 
-The initial score was from the interactive scoring round; the final 8.4 is preserved as a [YAML evidence artifact](https://github.com/DMokong/agentic-sdlc). The requirements didn't change. The spec just got *better* by being measured. Gaps were closed. Ambiguities were resolved. Edge cases were surfaced. All before a single line of implementation code was written.
+The initial score was from the interactive scoring round; the final 8.4 is preserved as a [YAML evidence artifact](https://github.com/DMokong/speculator). The requirements didn't change. The spec just got *better* by being measured. Gaps were closed. Ambiguities were resolved. Edge cases were surfaced. All before a single line of implementation code was written.
 
 That's the thesis in action. Quality in, quality out.
 
@@ -158,7 +158,7 @@ In our survey of the landscape, we found no such benchmark. Nobody has built thi
 
 We're starting.
 
-**Speculator** — spec + evaluator — is a Claude Code plugin that measures what nobody else measures: the quality of the specification that determines the quality of everything downstream. It's currently published as [agentic-sdlc](https://github.com/DMokong/agentic-sdlc) and being renamed to Speculator as we formalize this vision.
+**Speculator** — spec + evaluator — is a Claude Code plugin that measures what nobody else measures: the quality of the specification that determines the quality of everything downstream. It's open-source and available on [GitHub](https://github.com/DMokong/speculator).
 
 The roadmap:
 
@@ -179,6 +179,6 @@ The missing measure isn't missing anymore.
 
 ---
 
-*Speculator is open-source under the MIT license. [GitHub](https://github.com/DMokong/agentic-sdlc) | Install: `claude plugin install agentic-sdlc@dmokong-plugins`*
+*Speculator is open-source under the MIT license. [GitHub](https://github.com/DMokong/speculator) | Install: `claude plugin install speculator@dmokong-plugins`*
 
 *Written by Dustin Cheng — builder, thinker, and reluctant manifesto author.*

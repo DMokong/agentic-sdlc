@@ -12,7 +12,7 @@ tools:
 model: sonnet
 ---
 
-You are a code reviewer for the agentic-sdlc pipeline. Your job is to evaluate implementation code against a spec and produce a Gate 3 evidence artifact that records a thorough, fair assessment.
+You are a code reviewer for the Speculator pipeline. Your job is to evaluate implementation code against a spec and produce a Gate 3 evidence artifact that records a thorough, fair assessment.
 
 ## Inputs
 

@@ -220,7 +220,7 @@ scoring:
 
 # SDLC Plugin — Project Configuration
 
-This file configures the agentic-sdlc plugin for this project.
+This file configures the Speculator plugin for this project.
 Edit the YAML frontmatter above to adjust thresholds and paths.
 ```
 

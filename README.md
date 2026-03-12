@@ -4,9 +4,9 @@
 >
 > 📖 [Read the full manifesto: *Quality In, Quality Out* →](MANIFESTO.md)
 
-# Agentic SDLC Plugin
+# Speculator
 
-A Claude Code plugin that enforces a 4-gate quality pipeline on agentic development workflows with LLM-as-judge scoring, git worktree isolation, and in-repo evidence artifacts.
+A Claude Code plugin that enforces a 4-gate quality pipeline on agentic development workflows with LLM-as-judge spec scoring, git worktree isolation, and in-repo evidence artifacts. *Spec + Evaluator = Speculator.*
 
 ## Prerequisites
 
@@ -21,7 +21,7 @@ A Claude Code plugin that enforces a 4-gate quality pipeline on agentic developm
 claude plugin marketplace add DMokong/claude-plugins
 
 # Install the plugin
-claude plugin install agentic-sdlc@dmokong-plugins --scope project
+claude plugin install speculator@dmokong-plugins --scope project
 
 # Bootstrap your project
 /sdlc doctor --init
@@ -95,7 +95,7 @@ Spec quality determines how much human oversight is needed:
 
 ### Self-Improvement Philosophy
 
-Self-improvement is a core principle of the agentic-sdlc pipeline, not an afterthought.
+Self-improvement is a core principle of the Speculator pipeline, not an afterthought.
 
 The self-improvement trigger (default **8.0**) is intentionally set **higher** than the Full Auto threshold (default **7.8**). This gap is by design:
 
@@ -176,7 +176,7 @@ run:
 ## Plugin Structure
 
 ```
-agentic-sdlc/
+speculator/
 ├── skills/
 │   ├── sdlc/SKILL.md         # Master orchestrator (routes /sdlc subcommands)
 │   ├── spec-create/SKILL.md  # /sdlc start -- spec + worktree + beads epic
