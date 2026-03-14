@@ -22,7 +22,7 @@ You will be told:
 1. Read the closing spec's problem statement, requirements, acceptance criteria, and `amends` field from its frontmatter and body
 2. Read the current `SYSTEM-SPEC.md` — if the file does not exist, start with the empty template (see First Compaction Handling below)
 3. For each requirement and acceptance criterion in the closing spec:
-   - If it maps to an existing behavior in the system spec → update that entry with the new description and append to its provenance trail (e.g., `[from: SPEC-004, updated by SPEC-023]`)
+   - If it maps to an existing behavior in the system spec → update that entry with the new description and append to its provenance trail (e.g., `[from: SPEC-004, amended by SPEC-023]`)
    - If it is a new behavior → add it as a new list item in the appropriate domain section
    - If no matching domain section exists → create a new section for it
 4. For each entry in the `amends` field of the closing spec:

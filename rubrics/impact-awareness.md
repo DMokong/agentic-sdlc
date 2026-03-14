@@ -137,7 +137,7 @@ system_spec_parseable: true | false
 domains_detected:
   - scoring-dimensions
   - gate-thresholds
-impact_rating_declared: none | low | medium | high
+impact_rating_declared: none | low | moderate | high
 amends_populated: true | false
 amends_entries:
   - "6-dimension scoring rubric: add impact_awareness as 7th dimension"
