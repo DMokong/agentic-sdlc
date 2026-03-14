@@ -39,6 +39,7 @@ Based on the user's command, invoke the appropriate sub-skill. Both `/sdlc` and 
 | `/sdlc close` or `/spec close` | Run Gate 4 — invoke `gate-check` skill with gate=evidence-package |
 | `/sdlc run` or `/spec run` | Run the full pipeline autonomously — invoke `sdlc-run` skill |
 | `/sdlc doctor` or `/spec doctor` | Run system diagnostics — invoke `sdlc-doctor` skill |
+| `/sdlc compact` or `/spec compact` | Bootstrap: process closed specs into SYSTEM-SPEC.md — invoke `spec-compact` skill |
 
 ## `/sdlc implement`
 
@@ -121,7 +122,25 @@ This command finalizes the feature and guides merging back to main:
       - After merge: the worktree can be cleaned up on session exit
    c. If on main: just confirm all gates passed and work is committed.
 
-5. **Remind about shared files**: "If you modified any shared files (.beads/, CLAUDE.md, sdlc.local.md) in the worktree, review those changes carefully during merge."
+5. **Compact into system spec** (runs after merge lands on main):
+   - Invoke the `spec-compactor` agent (from `${CLAUDE_PLUGIN_ROOT}/agents/spec-compactor/AGENT.md`) with:
+     - `spec_path`: path to the closing spec
+     - `system_spec_path`: `{spec_dir}/SYSTEM-SPEC.md`
+   - The agent produces an updated SYSTEM-SPEC.md (or creates it if this is the first compaction)
+   - If the agent fails or SYSTEM-SPEC.md cannot be written, log the failure and leave the spec at `status: closed` — do not block the close flow
+
+6. **Mark spec as compacted** (only if step 5 succeeded):
+   - Update the spec's YAML frontmatter:
+     - `status: compacted`
+     - `compacted_into: SYSTEM-SPEC`
+     - `compacted_date: {today's date in YYYY-MM-DD}`
+
+7. **Commit compaction changes** (only if step 5 succeeded):
+   - Stage SYSTEM-SPEC.md and the spec's updated frontmatter
+   - Commit with message: `chore(sdlc): compact {spec_id} into SYSTEM-SPEC.md`
+   - Tell the user: "Two commits created: merge commit + compaction commit. This is by design — compaction only runs for validated, shipped specs."
+
+8. **Remind about shared files**: "If you modified any shared files (.beads/, CLAUDE.md, sdlc.local.md) in the worktree, review those changes carefully during merge."
 
 ## `/sdlc` with no args
 
