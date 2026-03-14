@@ -324,6 +324,14 @@ chore(sdlc): gate 1 — spec scored {score}, mode: {autonomy_mode}
    git merge {worktree-branch}
    ```
 
+9. **Compact into system spec:**
+   - After merge lands on main, invoke the `spec-compactor` agent from `${CLAUDE_PLUGIN_ROOT}/agents/spec-compactor/AGENT.md` with:
+     - `spec_path`: path to the closing spec
+     - `system_spec_path`: `{spec_dir}/SYSTEM-SPEC.md`
+   - Update spec frontmatter: `status: compacted`, `compacted_into: SYSTEM-SPEC`, `compacted_date: {today}`
+   - Commit: `chore(sdlc): compact {spec_id} into SYSTEM-SPEC.md`
+   - If compaction fails, warn but do not block — the spec remains `closed` (valid but not yet folded into system spec)
+
 ---
 
 ## 8. Headless Detection
