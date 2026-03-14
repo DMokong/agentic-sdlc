@@ -45,6 +45,39 @@ After determining pass/fail, validate that the spec's declared risk level is con
    - **Possible overstatement** — If `risk_level` is `high` or `critical` but no risk signals are found in the scanned sections: emit an **advisory** note suggesting the author verify the risk level is not overstated.
    - **No mismatch** — If neither condition applies, no risk flag is needed.
 
+## Impact Validation (runs after scoring)
+
+After risk validation, run impact awareness validation. Read `rubrics/impact-awareness.md` for the decision matrix and flag definitions.
+
+**Input:** `system_spec_path` — path to `SYSTEM-SPEC.md`, constructed from the project's `spec_dir` config as `{spec_dir}/SYSTEM-SPEC.md`.
+
+**6-step process:**
+
+1. Check if `SYSTEM-SPEC.md` exists at `{spec_dir}/SYSTEM-SPEC.md`. If not → skip impact validation entirely (greenfield).
+2. Check if `SYSTEM-SPEC.md` is parseable (has `##` domain section headers with `-` behavior entries). If malformed → skip validation, emit `system_spec_malformed` advisory flag.
+3. Read the new spec's `impact_rating` and `amends` fields from YAML frontmatter.
+4. Perform semantic analysis of the spec body (problem statement, requirements, ACs) against each domain section header and behavior entry in `SYSTEM-SPEC.md`. Identify overlapping domains.
+5. Apply the Impact Mismatch Decision Matrix from the rubric.
+6. Emit appropriate flags: `impact_mismatch` (blocking), `impact_underspecified` (recommended), `impact_incomplete` (recommended), or `system_spec_malformed` (advisory).
+
+**Behavioral rules:**
+
+- Impact validation runs AFTER the 6-dimension scoring, not during. It does not affect dimension scores.
+- Semantic overlap detection is an LLM judgment call — same pattern as risk signal detection. No keyword matching.
+- When `SYSTEM-SPEC.md` is empty (0 domains, 0 behaviors), treat as greenfield — skip validation.
+- Malformed `SYSTEM-SPEC.md` → skip validation + emit `system_spec_malformed` advisory flag.
+
+**Trust-erosion mitigation:**
+
+- `impact_mismatch` (blocking) requires high-confidence overlap — must identify a SPECIFIC behavior entry in `SYSTEM-SPEC.md` that the new spec would change. Vague thematic similarity is insufficient.
+- `impact_underspecified` and `impact_incomplete` are non-blocking — surface potential issues without stopping the pipeline.
+- Severity escalation is intentional: blocking requires specificity, non-blocking tolerates ambiguity.
+- When in doubt between `impact_mismatch` and `impact_underspecified`, ask: "Can I point to a specific sentence in `SYSTEM-SPEC.md` and say: this new spec would make that sentence false or incomplete?" If yes → `impact_mismatch`. If no → `impact_underspecified` at most.
+
+Emit all impact validation flags into the existing `flags:` section of the scorecard output, alongside any risk validation flags. The blocking/recommended/advisory categories already support this.
+
+---
+
 ## Output
 
 Write the completed scorecard YAML to: `{spec_dir}/{spec_name}/evidence/gate-1-scorecard.yml`
@@ -61,4 +94,5 @@ Create the evidence directory if it doesn't exist.
 - Categorize flags into blocking, recommended, and advisory severity levels as defined in the rubric.
 - If any blocking flags exist, result is fail regardless of score.
 - If a `risk_mismatch` blocking flag is emitted, the result must be `fail` (consistent with the rule that any blocking flag = fail).
+- If an `impact_mismatch` blocking flag is emitted, the result must be `fail` (consistent with the rule that any blocking flag = fail).
 - Never modify the spec itself. Only produce the scorecard.
