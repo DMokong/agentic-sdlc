@@ -6,6 +6,13 @@ date:
 epic:
 worktree:
 risk_level: medium
+impact_rating: none          # none | low | moderate | high
+amends: []                   # list of {section, behavior, change, reason} objects
+# amends example:
+#   - section: "Auth"
+#     behavior: "Sessions use short-lived tokens (24h expiry)"
+#     change: "Extended to 7-day refresh tokens"
+#     reason: "Mobile UX"  # optional
 ---
 
 ## Problem Statement
@@ -37,3 +44,8 @@ Why does this feature exist? What outcome matters beyond the surface behavior?
 ## Constraints
 
 ## Out of Scope
+
+## Impact Declaration
+
+<!-- If SYSTEM-SPEC.md exists, declare what this spec changes -->
+<!-- impact_rating and amends in frontmatter are auto-populated by /sdlc start -->
