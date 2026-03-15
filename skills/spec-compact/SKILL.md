@@ -1,10 +1,11 @@
 ---
 name: spec-compact
 description: >-
-  Use when the user says "/sdlc compact", "/spec compact", "/sdlc compact --all",
-  "/spec compact --all", or wants to bootstrap SYSTEM-SPEC.md from closed specs.
-  Also handles single-spec compaction: "/spec compact {spec-name}". Folds closed
-  specs into the cumulative system specification (SYSTEM-SPEC.md).
+  Folds closed specs into the cumulative system specification (SYSTEM-SPEC.md) — either
+  bootstrapping from all closed specs with --all or compacting a single named spec on
+  demand. Use when the user says "/sdlc compact", "/spec compact", "compact specs",
+  "update the system spec", "fold this in", "consolidate specs", "bootstrap SYSTEM-SPEC",
+  or wants to maintain the living system specification.
 ---
 
 # Compact Specs into SYSTEM-SPEC.md

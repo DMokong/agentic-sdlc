@@ -1,9 +1,11 @@
 ---
 name: sdlc-status
 description: >-
-  Use when the user says "/sdlc status", "/spec status", "show pipeline status",
-  "where am I in the sdlc", "what gates have passed", or wants to see the current
-  state of their spec's quality pipeline.
+  Shows cross-worktree pipeline status — displays where each spec stands in the 4-gate
+  quality pipeline, including specs across all worktrees. Use when the user says "/sdlc
+  status", "/spec status", "show pipeline status", "where am I in the sdlc", "what gates
+  have passed", "how's the feature going?", "what's left to do?", "progress check", or
+  wants to see the current state of their spec's quality pipeline.
 ---
 
 # SDLC Pipeline Status

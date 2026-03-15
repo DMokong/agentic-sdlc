@@ -1,10 +1,11 @@
 ---
 name: sdlc
 description: >-
-  Use when the user says "/sdlc" or "/spec" with any subcommand (start, score,
-  gate, status, implement, review, close, run, doctor), or just "/sdlc" or "/spec"
-  with no args to see status. This is the master orchestrator for the Speculator
-  quality pipeline. Both "/sdlc" and "/spec" prefixes are equivalent.
+  Master orchestrator for the Speculator quality pipeline — routes all /sdlc and
+  /spec commands to specialized sub-skills. Use when the user says "/sdlc" or "/spec"
+  with any subcommand (start, score, gate, status, implement, review, close, run,
+  compact, doctor), says "run the quality pipeline", "quality gates", or just "/sdlc"
+  or "/spec" with no args to see status. Both prefixes are equivalent.
 ---
 
 # Speculator — Master Orchestrator

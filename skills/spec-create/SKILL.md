@@ -1,10 +1,11 @@
 ---
 name: spec-create
 description: >-
-  Use when the user says "/sdlc start", "/spec start", "/spec create", "create a
-  spec", "new spec", "start a new feature spec", or wants to begin a new piece of
-  work with a formal specification. Creates a spec from the template in the
-  project's configured spec directory.
+  Creates a new specification with git worktree isolation, beads epic tracking, and
+  memory wiring — the starting point for any new feature in the Speculator pipeline.
+  Use when the user says "/sdlc start", "/spec start", "/spec create", "create a spec",
+  "new spec", "start a new feature", "I want to build something new", "let's start
+  something new", or wants to begin a new piece of work with a formal specification.
 ---
 
 # Create a New Spec

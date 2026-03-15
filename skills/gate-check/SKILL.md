@@ -1,9 +1,12 @@
 ---
 name: gate-check
 description: >-
-  Use when the user says "/sdlc gate", "/spec gate", "check gate", "verify gate",
-  "gate status", or wants to check whether a specific gate has been passed for a
-  spec. Can also run a gate check (e.g., collect code quality evidence for Gate 2).
+  Checks or runs quality gates (1-4) for a specification — verifies whether gate
+  evidence exists, or collects new evidence by running tests, code review, or building
+  the evidence package. Use when the user says "/sdlc gate", "/spec gate", "check gate",
+  "verify gate", "gate status", "are my tests passing?", "check code quality", "is this
+  ready to merge?", "run the review", "collect evidence", or wants to verify or produce
+  gate evidence.
 ---
 
 # Check or Run a Gate
