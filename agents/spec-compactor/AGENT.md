@@ -1,6 +1,9 @@
 ---
 name: spec-compactor
-description: Folds a closing spec's contributions into the compacted system specification (SYSTEM-SPEC.md).
+description: >-
+  Folds a closing spec's behavioral contributions into the compacted system specification
+  (SYSTEM-SPEC.md) — extracts behaviors, organizes by domain, maintains provenance trails,
+  and handles amendments to existing behaviors. Invoked by /sdlc close and /spec compact.
 tools:
   - Read
   - Write

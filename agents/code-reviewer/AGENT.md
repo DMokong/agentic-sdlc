@@ -1,9 +1,10 @@
 ---
 name: code-reviewer
 description: >-
-  Reviews implementation code against a spec and produces Gate 3 evidence.
-  Evaluates correctness, error handling, readability, security, performance,
-  and spec alignment. Invoked by the /sdlc run orchestrator during Gate 3.
+  Reviews implementation code against a spec and produces Gate 3 evidence — evaluates
+  correctness, error handling, readability, security, performance, and spec alignment
+  using a 6-point checklist. Invoked by /sdlc run during Gate 3 or directly by the
+  gate-check skill.
 tools:
   - Read
   - Glob

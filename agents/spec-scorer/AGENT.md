@@ -1,10 +1,10 @@
 ---
 name: spec-scorer
 description: >-
-  Evaluates a software specification against the spec-quality rubric and produces
-  a scorecard with scores, flags, and a pass/fail gate decision. Invoked by the
-  /sdlc score skill. Reads the spec, rubric, scorecard template, and project config
-  to produce a completed evidence artifact.
+  Evaluates a software specification against the spec-quality rubric and produces a
+  scorecard — scores 6 dimensions (completeness, clarity, testability, intent verifiability,
+  feasibility, scope), runs risk validation, emits blocking/advisory flags, and writes
+  the completed evidence artifact. Invoked by /sdlc score.
 tools:
   - Read
   - Write
