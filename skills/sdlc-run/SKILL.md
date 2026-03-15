@@ -84,32 +84,6 @@ Resuming from {description of last completed checkpoint}.
 
 ## 3. Phase 1: Spec Scoring & Trust Evaluation
 
-### Read Configuration
-
-Read the project config from `.claude/sdlc.local.md` and look for a `run:` block. If no `run:` block exists, use these defaults:
-
-```yaml
-run:
-  self_improvement_trigger: 8.0
-  full_auto_threshold: 7.8
-  guided_threshold: 7.0
-  max_spec_retries: 3
-  max_code_retries: 3
-  intent_verifiability_min: 8
-```
-
-### Score the Spec
-
-Invoke the `spec-score` skill → produces `evidence/gate-1-scorecard.yml`.
-
-Read the scorecard and extract:
-- `overall` score (weighted average)
-- `intent_verifiability` dimension score
-- All `flags` (blocking, recommended, advisory)
-
-Read the spec YAML frontmatter and extract:
-- `risk_level` (default: `medium` if absent)
-
 ### Trust Ladder
 
 Evaluate the trust ladder in this exact order. Hard gates are checked first; score-based evaluation only applies if no hard gate fires.
@@ -148,194 +122,35 @@ When a spec enters the self-improvement loop, iterate up to `max_spec_retries` t
 6. If the spec now qualifies for Full Auto or Guided, exit the loop.
 7. If retries are exhausted and the score is still below `guided_threshold` → **Stop**.
 
-### Record Trust Decision
+### Mechanical Steps
 
-Update the spec's YAML frontmatter with the trust evaluation result:
-
-```yaml
-autonomy_mode: full_auto | guided | stopped
-trust_score: 8.3
-trust_attempts: 1
-```
-
-### If Stopped
-
-When the pipeline stops due to insufficient spec quality:
-
-1. Create a beads issue tagged `spec-rework`:
-   ```bash
-   beads create --title "Spec rework needed: {spec_title}" \
-     --description "Score: {score}, unresolved flags: {flag_list}, weakest: {dimensions}" \
-     --priority P1
-   ```
-2. Exit with a message listing:
-   - The final score
-   - Unresolved blocking flags
-   - The weakest dimensions with their scores
-   - Suggestion: "Revise the spec and run `/sdlc run` again to resume."
-
-### Commit
-
-Commit all scorecard(s) and spec updates from this phase:
-```
-chore(sdlc): gate 1 — spec scored {score}, mode: {autonomy_mode}
-```
+For the procedural details of Phase 1 (reading config, invoking the scorer, recording trust decisions, handling stopped specs, committing), read `references/phase-scoring.md`.
 
 ---
 
-## 4. Phase 2: Plan Creation
+## Phases 2–5: Execution
 
-1. **Invoke the `writing-plans` skill** with the approved spec path. The plan is saved to `docs/plans/YYYY-MM-DD-{feature-name}.md`.
+Each phase below has detailed procedural steps in a dedicated reference file. The orchestrator reads the relevant file when entering each phase.
 
-2. **Create beads user stories** from plan tasks:
-   - For each task in the plan, create a beads issue:
-     ```bash
-     beads create --title "Task N: {task_title}" \
-       --description "{task_description}" --priority P2
-     ```
-   - Link each story to the spec's epic (from spec frontmatter `epic` field):
-     ```bash
-     beads dep add {story-id} --blocked-by {epic-id}
-     ```
+### Phase 2: Plan Creation
+Create implementation plan via `writing-plans` skill, generate beads stories, handle Guided/Full Auto mode differences.
+→ Read `references/phase-planning.md` for detailed steps.
 
-3. **Guided + interactive mode** → Present the plan summary, then ask:
-   ```
-   AskUserQuestion: "Plan created with N tasks. Approve and continue to implementation? (y/n)"
-   ```
-   - If rejected, stop and let the user revise.
+### Phase 3: Implementation + Gate 2
+Execute plan via `subagent-driven-development`, run Gate 2 (code quality), self-heal loop for test failures (max `max_code_retries` attempts).
+→ Read `references/phase-implementation.md` for detailed steps.
 
-4. **Guided + headless mode** → Commit the plan, output review instructions, exit with code 0:
-   ```
-   Plan committed. Review at: docs/plans/{plan-file}
-   To continue: /sdlc run
-   ```
+### Phase 4: Code Review (Gate 3)
+Dispatch `code-reviewer` agent, one self-fix cycle for blocking issues, escalate if unresolved.
+→ Read `references/phase-review.md` for detailed steps.
 
-5. **Full Auto mode** → Commit and proceed to Phase 3 without pausing.
-
-6. **Commit** plan + stories:
-   ```
-   chore(sdlc): phase 2 — plan created with N tasks
-   ```
+### Phase 5: Evidence Package & Merge (Gate 4)
+Present pipeline summary (Guided mode), invoke `gate-check` for evidence package, close beads issues, merge to main, compact into SYSTEM-SPEC.md.
+→ Read `references/phase-evidence.md` for detailed steps.
 
 ---
 
-## 5. Phase 3: Implementation + Gate 2
-
-1. **Execute the plan** using the `subagent-driven-development` skill (dispatches a fresh subagent per task). If subagents are unavailable, fall back to `executing-plans` skill.
-
-2. **Run Gate 2** after implementation: Invoke the `gate-check` skill with `gate=code-quality` → produces `evidence/gate-2-quality.yml`.
-
-3. **Self-heal loop** (max `max_code_retries` from config, default 3):
-   - If tests fail or coverage is below the threshold:
-     1. Read the failure details from test output and gate evidence.
-     2. Identify the failing tests or coverage gaps.
-     3. Fix the issues — add missing tests, fix broken assertions, adjust implementation.
-     4. Re-run Gate 2.
-   - If retries exhausted and Gate 2 still fails → escalate to human:
-     ```
-     Gate 2 (code quality) failed after {N} fix attempts.
-     Failures: {failure_summary}
-     Manual intervention needed before the pipeline can continue.
-     ```
-
-4. **Commit** implementation + evidence:
-   ```
-   feat: implement {spec_title}
-
-   Gate 2 (code quality): pass
-   ```
-
----
-
-## 6. Phase 4: Code Review (Gate 3)
-
-1. **Dispatch the `code-reviewer` agent** from `${CLAUDE_PLUGIN_ROOT}/agents/code-reviewer/AGENT.md` with:
-   - Spec path
-   - Plan path
-   - Worktree base directory
-   - Output path: `{spec_dir}/{spec_name}/evidence/gate-3-review.yml`
-
-2. **If blocking issues found** → one self-fix cycle:
-   1. Read the blocking issues from `gate-3-review.yml`.
-   2. Address each blocking issue in the code.
-   3. Re-dispatch the `code-reviewer` agent to produce a fresh review.
-
-3. **If still blocking after self-fix** → escalate to human:
-   ```
-   Gate 3 (code review) found blocking issues that persist after auto-fix:
-   {blocking_issues}
-   Manual intervention needed.
-   ```
-
-4. **Commit** evidence:
-   ```
-   chore(sdlc): gate 3 — code review {pass|fail}
-   ```
-
----
-
-## 7. Phase 5: Evidence Package & Merge (Gate 4)
-
-1. **Guided + interactive mode** → Present a summary of all work before proceeding:
-   ```
-   Pipeline Summary:
-     Spec:           {spec_title} ({spec_id})
-     Trust mode:     {autonomy_mode} (score: {trust_score})
-     Gate 1 (spec):  pass ({score})
-     Gate 2 (code):  pass
-     Gate 3 (review): pass
-     Plan:           {N} tasks completed
-     Stories:        {N} closed
-   ```
-   Then ask:
-   ```
-   AskUserQuestion: "All gates passed. Approve and merge to main? (y/n)"
-   ```
-   - If rejected, stop and let the user review.
-
-2. **Guided + headless mode** → Commit everything, output review instructions, exit:
-   ```
-   All gates passed. Evidence committed.
-   To merge: git checkout main && git merge {branch}
-   Or run /sdlc run again in interactive mode to approve the merge.
-   ```
-
-3. **Full Auto mode** → Proceed with merge automatically.
-
-4. **Invoke `gate-check`** with `gate=evidence-package` → produces `evidence/gate-4-summary.yml`.
-
-5. **Close beads issues**:
-   - Find all stories linked to the epic: `beads dep list {epic-id}`
-   - Close each completed story: `beads close {story-id}`
-   - Close the epic: `beads close {epic-id}`
-
-6. **Remove the `.active` lock file**:
-   ```bash
-   rm docs/specs/{spec-name}/.active
-   ```
-
-7. **Commit** all evidence:
-   ```
-   chore(sdlc): gate 4 — evidence package complete
-   ```
-
-8. **Merge** the worktree branch to main:
-   ```bash
-   git checkout main
-   git merge {worktree-branch}
-   ```
-
-9. **Compact into system spec:**
-   - After merge lands on main, invoke the `spec-compactor` agent from `${CLAUDE_PLUGIN_ROOT}/agents/spec-compactor/AGENT.md` with:
-     - `spec_path`: path to the closing spec
-     - `system_spec_path`: `{spec_dir}/SYSTEM-SPEC.md`
-   - Update spec frontmatter: `status: compacted`, `compacted_into: SYSTEM-SPEC`, `compacted_date: {today}`
-   - Commit: `chore(sdlc): compact {spec_id} into SYSTEM-SPEC.md`
-   - If compaction fails, warn but do not block — the spec remains `closed` (valid but not yet folded into system spec)
-
----
-
-## 8. Headless Detection
+## 4. Headless Detection
 
 Detect whether this session is interactive or headless to determine how Guided Autopilot behaves.
 
@@ -357,7 +172,7 @@ Guided checkpoints (where interactive mode pauses):
 
 ---
 
-## 9. Autonomy Modes — Summary
+## 5. Autonomy Modes — Summary
 
 ### Full Auto
 The spec scored high enough on the trust ladder to run without human checkpoints. All five phases execute sequentially. Self-heal loops engage automatically for code issues. The pipeline only stops if self-heal retries are exhausted.
@@ -370,7 +185,7 @@ The spec could not reach the `guided_threshold` even after `max_spec_retries` im
 
 ---
 
-## 10. Self-Improvement Loop Boundary Constraint
+## 6. Self-Improvement Loop Boundary Constraint
 
 > **The self-improvement loop may add detail, examples, anti-patterns, and clarifications to existing sections. It MUST NOT remove or materially alter existing requirements or acceptance criteria without human approval. It is improving the spec's *expression* of the intent, not changing the intent itself.**
 
