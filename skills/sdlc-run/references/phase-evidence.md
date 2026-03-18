@@ -32,8 +32,7 @@ Read `close.strategy` from the project config (`.claude/sdlc.local.md`). Default
    - If strategy is `pr`:
      ```
      All gates passed. Evidence committed.
-     To create PR: gh pr create --base main
-     Or run /sdlc run again in interactive mode to create the PR.
+     Run /sdlc close in interactive mode to create the PR with full evidence body.
      ```
 
 3. **Full Auto mode** → Proceed with delivery automatically (merge or PR based on strategy).
@@ -76,11 +75,17 @@ Read `close.strategy` from the project config (`.claude/sdlc.local.md`). Default
 ### Strategy: `pr`
 
 8. **Create a pull request**:
-   a. Push the branch to the remote:
+   a. **Verify `gh` CLI is available**:
+      ```bash
+      which gh
+      ```
+      If `gh` is not found, stop and tell the user: *"gh CLI is required for PR creation. Install it: https://cli.github.com/ — then re-run `/sdlc close`."*
+   b. Push the branch to the remote:
       ```bash
       git push -u origin {worktree-branch}
       ```
-   b. Build the PR body from gate evidence:
+      If the push fails, surface the error and suggest: *"Check your remote with `git remote -v`. Ensure the remote exists and you have push access."*
+   c. Build the PR body from gate evidence:
       - Read `gate-4-summary.yml` for the pipeline result
       - Read the spec's title, problem statement, and acceptance criteria
       - Read `gate-1-scorecard.yml` for the spec quality score
@@ -89,12 +94,13 @@ Read `close.strategy` from the project config (`.claude/sdlc.local.md`). Default
         - **Spec quality**: overall score from Gate 1
         - **Evidence**: table showing all 4 gates and their results
         - **Acceptance criteria**: list from the spec
-        - Footer: `🔬 Quality pipeline: Speculator`
-   c. Create the PR:
+        - Footer: `🔬 Quality pipeline: Speculator | Spec: {spec_id} | Score: {overall_score}`
+   d. Create the PR:
       ```bash
       gh pr create --title "{spec_title}" --body "{composed body}" --base main
       ```
-   d. Report the PR URL.
+      If `gh pr create` fails, surface the error and suggest: *"Run `gh auth status` to verify authentication. Ensure you have repo access."*
+   e. Report the PR URL.
 
 9. **Defer compaction**: Compaction requires the spec to be on main. Output:
    *"Compaction into SYSTEM-SPEC.md is deferred — run `/spec compact {spec-name}` after the PR is merged to main."*

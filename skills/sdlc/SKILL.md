@@ -159,11 +159,17 @@ Read `close.strategy` from the project config (`.claude/sdlc.local.md`). Default
 4. **Create a pull request** (if Gate 4 passes):
    a. Check if we're in a worktree (`git worktree list`)
    b. Commit all remaining changes in the worktree
-   c. Push the branch to the remote:
+   c. **Verify `gh` CLI is available**:
+      ```bash
+      which gh
+      ```
+      If `gh` is not found, stop and tell the user: *"gh CLI is required for PR creation. Install it: https://cli.github.com/ — then re-run `/sdlc close`."*
+   d. Push the branch to the remote:
       ```bash
       git push -u origin {worktree-branch}
       ```
-   d. Build the PR body from the gate evidence:
+      If the push fails, surface the error and suggest: *"Check your remote with `git remote -v`. Ensure the remote exists and you have push access."*
+   e. Build the PR body from the gate evidence:
       - Read `gate-4-summary.yml` for the pipeline result
       - Read the spec's title, problem statement, and acceptance criteria
       - Read `gate-1-scorecard.yml` for the spec quality score
@@ -172,12 +178,13 @@ Read `close.strategy` from the project config (`.claude/sdlc.local.md`). Default
         - **Spec quality**: overall score from Gate 1
         - **Evidence**: table showing all 4 gates and their results
         - **Acceptance criteria**: list from the spec
-        - Footer: `🔬 Quality pipeline: Speculator`
-   e. Create the PR:
+        - Footer: `🔬 Quality pipeline: Speculator | Spec: {spec_id} | Score: {overall_score}`
+   f. Create the PR:
       ```bash
       gh pr create --title "{spec_title}" --body "{composed body}" --base main
       ```
-   f. Report the PR URL to the user.
+      If `gh pr create` fails, surface the error and suggest: *"Run `gh auth status` to verify authentication. Ensure you have repo access."*
+   g. Report the PR URL to the user.
 
 5. **Skip compaction**: Compaction requires the spec to be on main. Tell the user:
    *"Compaction into SYSTEM-SPEC.md is deferred — run `/spec compact {spec-name}` after the PR is merged to main."*
