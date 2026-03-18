@@ -156,20 +156,36 @@ Read `close.strategy` from the project config (`.claude/sdlc.local.md`). Default
 
 #### Strategy: `pr`
 
-4. **Create a pull request** (if Gate 4 passes):
+4. **Compact into system spec** (runs on the feature branch, before PR creation):
+   - Invoke the `spec-compactor` agent (from `${CLAUDE_PLUGIN_ROOT}/agents/spec-compactor/AGENT.md`) with:
+     - `spec_path`: path to the closing spec
+     - `system_spec_path`: `{spec_dir}/SYSTEM-SPEC.md`
+   - The agent produces an updated SYSTEM-SPEC.md (or creates it if this is the first compaction)
+   - If the agent fails or SYSTEM-SPEC.md cannot be written, log the failure and leave the spec at `status: closed` — do not block the close flow
+
+5. **Mark spec as compacted** (only if step 4 succeeded):
+   - Update the spec's YAML frontmatter:
+     - `status: compacted`
+     - `compacted_into: SYSTEM-SPEC`
+     - `compacted_date: {today's date in YYYY-MM-DD}`
+
+6. **Commit compaction changes** (only if step 4 succeeded):
+   - Stage SYSTEM-SPEC.md and the spec's updated frontmatter
+   - Commit with message: `chore(sdlc): compact {spec_id} into SYSTEM-SPEC.md`
+
+7. **Create a pull request**:
    a. Check if we're in a worktree (`git worktree list`)
-   b. Commit all remaining changes in the worktree
-   c. **Verify `gh` CLI is available**:
+   b. **Verify `gh` CLI is available**:
       ```bash
       which gh
       ```
       If `gh` is not found, stop and tell the user: *"gh CLI is required for PR creation. Install it: https://cli.github.com/ — then re-run `/sdlc close`."*
-   d. Push the branch to the remote:
+   c. Push the branch to the remote:
       ```bash
       git push -u origin {worktree-branch}
       ```
       If the push fails, surface the error and suggest: *"Check your remote with `git remote -v`. Ensure the remote exists and you have push access."*
-   e. Build the PR body from the gate evidence:
+   d. Build the PR body from the gate evidence:
       - Read `gate-4-summary.yml` for the pipeline result
       - Read the spec's title, problem statement, and acceptance criteria
       - Read `gate-1-scorecard.yml` for the spec quality score
@@ -179,19 +195,16 @@ Read `close.strategy` from the project config (`.claude/sdlc.local.md`). Default
         - **Evidence**: table showing all 4 gates and their results
         - **Acceptance criteria**: list from the spec
         - Footer: `🔬 Quality pipeline: Speculator | Spec: {spec_id} | Score: {overall_score}`
-   f. Create the PR:
+   e. Create the PR:
       ```bash
       gh pr create --title "{spec_title}" --body "{composed body}" --base main
       ```
       If `gh pr create` fails, surface the error and suggest: *"Run `gh auth status` to verify authentication. Ensure you have repo access."*
-   g. Report the PR URL to the user.
+   f. Report the PR URL to the user.
 
-5. **Skip compaction**: Compaction requires the spec to be on main. Tell the user:
-   *"Compaction into SYSTEM-SPEC.md is deferred — run `/spec compact {spec-name}` after the PR is merged to main."*
+8. **Remind about shared files**: "If you modified any shared files (.beads/, CLAUDE.md, sdlc.local.md) in the worktree, review those changes carefully — they'll be part of the PR diff."
 
-6. **Remind about shared files**: "If you modified any shared files (.beads/, CLAUDE.md, sdlc.local.md) in the worktree, review those changes carefully — they'll be part of the PR diff."
-
-7. **Worktree note**: "The worktree stays active until the PR merges. After merge, clean up with `git worktree remove {worktree-path}`."
+9. **Worktree note**: "The worktree stays active until the PR merges. After merge, clean up with `git worktree remove {worktree-path}`."
 
 ## `/sdlc` with no args
 

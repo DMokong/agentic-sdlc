@@ -74,7 +74,15 @@ Read `close.strategy` from the project config (`.claude/sdlc.local.md`). Default
 
 ### Strategy: `pr`
 
-8. **Create a pull request**:
+8. **Compact into system spec** (runs on the feature branch, before PR creation):
+   - Invoke the `spec-compactor` agent from `${CLAUDE_PLUGIN_ROOT}/agents/spec-compactor/AGENT.md` with:
+     - `spec_path`: path to the closing spec
+     - `system_spec_path`: `{spec_dir}/SYSTEM-SPEC.md`
+   - Update spec frontmatter: `status: compacted`, `compacted_into: SYSTEM-SPEC`, `compacted_date: {today}`
+   - Commit: `chore(sdlc): compact {spec_id} into SYSTEM-SPEC.md`
+   - If compaction fails, warn but do not block — the spec remains `closed` (valid but not yet folded into system spec)
+
+9. **Create a pull request**:
    a. **Verify `gh` CLI is available**:
       ```bash
       which gh
@@ -101,7 +109,4 @@ Read `close.strategy` from the project config (`.claude/sdlc.local.md`). Default
       ```
       If `gh pr create` fails, surface the error and suggest: *"Run `gh auth status` to verify authentication. Ensure you have repo access."*
    e. Report the PR URL.
-
-9. **Defer compaction**: Compaction requires the spec to be on main. Output:
-   *"Compaction into SYSTEM-SPEC.md is deferred — run `/spec compact {spec-name}` after the PR is merged to main."*
-   The worktree stays active until the PR merges.
+   f. The worktree stays active until the PR merges.

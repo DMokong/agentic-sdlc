@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.4.0 — PR Strategy: Compaction Before PR
+
+### Changed
+- **PR close strategy**: Compaction now runs on the feature branch *before* PR creation (previously deferred to post-merge manual step)
+- SYSTEM-SPEC.md updates are included in the PR diff — no manual `/spec compact` needed after merge
+- Both `/sdlc close` and `/sdlc run` Phase 5 updated for the new flow
+
+### Fixed
+- Eliminated forgotten-compaction risk when using `close.strategy: pr`
+
 ## 2.1.0 — Spec Drift Detection (SPEC-013)
 
 ### Added
