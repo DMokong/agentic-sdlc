@@ -51,7 +51,7 @@ Now **brainstorm before you spec.** Use Claude's [brainstorming skill](https://g
 /spec score               # Gate 1: automated spec quality scoring
 /spec implement           # create plan + beads stories + execute
 /spec review              # Gate 3: code review
-/spec close               # Gate 4: evidence package + merge to main
+/spec close               # Gate 4: evidence package + deliver to main (merge or PR)
 ```
 
 ### One command
@@ -229,7 +229,7 @@ Each gate produces a YAML evidence artifact in `docs/specs/{feature}/evidence/`.
 | `/spec implement` | Create implementation plan + beads stories + execute tasks |
 | `/spec gate` | Check or run any specific gate |
 | `/spec review` | Gate 3: Automated code review |
-| `/spec close` | Gate 4: Evidence package + merge worktree to main + compact into SYSTEM-SPEC.md |
+| `/spec close` | Gate 4: Evidence package + deliver to main (merge or PR) + compact into SYSTEM-SPEC.md |
 | `/spec run [args]` | Run the full pipeline autonomously (trust-based oversight) |
 | `/spec compact` | Compact closed specs into SYSTEM-SPEC.md (`--all` for bootstrap) |
 | `/spec status` | Cross-worktree pipeline view (all features at a glance) |
@@ -364,6 +364,11 @@ scoring:
     feasibility: 0.15
     scope: 0.10
   dimension_minimum: 5     # any dimension below this fails the gate
+
+# Close behavior
+close:
+  strategy: merge              # "merge" (direct merge) or "pr" (create pull request)
+                                # Use "pr" for environments with branch protection rules
 
 # /spec run autonomy thresholds
 run:

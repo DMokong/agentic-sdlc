@@ -97,7 +97,12 @@ Each story can be tracked, audited, and closed independently. The epic closes wh
 
 ## `/sdlc close`
 
-This command finalizes the feature and guides merging back to main:
+This command finalizes the feature and delivers it to main. The delivery method depends on the `close.strategy` setting in the project config (`.claude/sdlc.local.md`):
+
+- `merge` (default) — direct merge to main from the worktree
+- `pr` — create a pull request to main (for environments with branch protection rules)
+
+### Steps 1–3: Common to both strategies
 
 1. **Run Gate 4** (evidence package) — invoke `gate-check` skill with gate=evidence-package.
 
@@ -113,6 +118,12 @@ This command finalizes the feature and guides merging back to main:
    - Close all completed stories: `beads close {story-id}`
    - Close the epic: `beads close {epic-id}`
    - Update the spec's YAML frontmatter: `status: closed`
+
+### Step 4: Deliver to main
+
+Read `close.strategy` from the project config (`.claude/sdlc.local.md`). Default is `merge` if not set.
+
+#### Strategy: `merge` (default)
 
 4. **Guide the merge** (if Gate 4 passes):
    a. Check if we're in a worktree (`git worktree list`)
@@ -142,6 +153,38 @@ This command finalizes the feature and guides merging back to main:
    - Tell the user: "Two commits created: merge commit + compaction commit. This is by design — compaction only runs for validated, shipped specs."
 
 8. **Remind about shared files**: "If you modified any shared files (.beads/, CLAUDE.md, sdlc.local.md) in the worktree, review those changes carefully during merge."
+
+#### Strategy: `pr`
+
+4. **Create a pull request** (if Gate 4 passes):
+   a. Check if we're in a worktree (`git worktree list`)
+   b. Commit all remaining changes in the worktree
+   c. Push the branch to the remote:
+      ```bash
+      git push -u origin {worktree-branch}
+      ```
+   d. Build the PR body from the gate evidence:
+      - Read `gate-4-summary.yml` for the pipeline result
+      - Read the spec's title, problem statement, and acceptance criteria
+      - Read `gate-1-scorecard.yml` for the spec quality score
+      - Compose a PR description with:
+        - **Summary**: spec title and 1-2 sentence problem statement
+        - **Spec quality**: overall score from Gate 1
+        - **Evidence**: table showing all 4 gates and their results
+        - **Acceptance criteria**: list from the spec
+        - Footer: `🔬 Quality pipeline: Speculator`
+   e. Create the PR:
+      ```bash
+      gh pr create --title "{spec_title}" --body "{composed body}" --base main
+      ```
+   f. Report the PR URL to the user.
+
+5. **Skip compaction**: Compaction requires the spec to be on main. Tell the user:
+   *"Compaction into SYSTEM-SPEC.md is deferred — run `/spec compact {spec-name}` after the PR is merged to main."*
+
+6. **Remind about shared files**: "If you modified any shared files (.beads/, CLAUDE.md, sdlc.local.md) in the worktree, review those changes carefully — they'll be part of the PR diff."
+
+7. **Worktree note**: "The worktree stays active until the PR merges. After merge, clean up with `git worktree remove {worktree-path}`."
 
 ## `/sdlc` with no args
 
