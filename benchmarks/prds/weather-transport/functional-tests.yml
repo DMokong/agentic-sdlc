@@ -1,0 +1,64 @@
+# Functional test checklist for PRD-001: Personalised Daily Weather + Transport
+# Layer 1: Playwright-testable assertions mapped to each requirement.
+# These are smoke-level checks — presence and basic correctness, not full integration.
+
+functional_checklist:
+  - id: F01
+    requirement: "R01: Display current temperature in Celsius"
+    test: "Page contains a visible element with a numeric value followed by °C (e.g. '22°C' or '22 °C')"
+
+  - id: F02
+    requirement: "R02: 5-day forecast with day labels, high/low temps, and weather icons"
+    test: "Page contains at least 5 elements displaying abbreviated day names (Mon/Tue/Wed/Thu/Fri/Sat/Sun) each accompanied by two temperature values (high and low) and an icon element"
+
+  - id: F03
+    requirement: "R03: Feels-like temperature with label"
+    test: "Page contains text matching 'Feels like' followed by a numeric value and °C unit"
+
+  - id: F04
+    requirement: "R04: Wind speed in km/h"
+    test: "Page contains text matching a numeric value followed by 'km/h'"
+
+  - id: F05
+    requirement: "R05: Next 5 departures with mode, route, destination, and time"
+    test: "Page contains at least 5 departure rows, each with a time value in HH:MM format and a destination name string"
+
+  - id: F06
+    requirement: "R06: Real-time delay status per departure"
+    test: "Each departure row contains either a green 'On time' indicator or a delay indicator showing '+N min' in amber or red"
+
+  - id: F07
+    requirement: "R07: Transport mode icon per departure"
+    test: "Each departure row contains an icon element (img, svg, or element with an aria-label) indicating the transport mode"
+
+  - id: F08
+    requirement: "R08: Persist preferred location in localStorage"
+    test: "After setting a location via settings, localStorage contains a key with location data (suburb name and coordinates); on page reload the weather panel loads without the user re-entering location"
+
+  - id: F09
+    requirement: "R09: Persist preferred transport stop in localStorage"
+    test: "After saving a stop via settings, localStorage contains a key with stop data (stop ID and name); on page reload the departures panel loads without the user re-entering stop"
+
+  - id: F10
+    requirement: "R10: Time-of-day greeting in header"
+    test: "Page header contains one of: 'Good morning', 'Good afternoon', 'Good evening', or 'Good night'"
+
+  - id: F11
+    requirement: "R11: Settings panel with location search"
+    test: "Clicking the settings icon opens a panel containing a text input for location search; typing a suburb name (e.g. 'Bondi') displays at least one selectable result"
+
+  - id: F12
+    requirement: "R12: Transport stop search in settings"
+    test: "Settings panel contains a text input for stop search; typing a stop name triggers a network request to api.transport.nsw.gov.au and displays at least one selectable result"
+
+  - id: F13
+    requirement: "R13: Responsive mobile-first layout"
+    test: "At viewport width 375px, weather and transport sections are stacked vertically (weather section appears above transport section); at viewport width 1024px they appear side by side"
+
+  - id: F14
+    requirement: "R14: Auto-refresh every 5 minutes + manual refresh button"
+    test: "Page contains a visible refresh button; clicking it triggers new network requests to Open-Meteo and TfNSW APIs; a network intercept confirms requests fire automatically after 300000ms"
+
+  - id: F15
+    requirement: "R15: Last-updated timestamp"
+    test: "Page contains a 'Last updated' label followed by a time value in HH:MM:SS format; after a manual refresh the timestamp value changes"

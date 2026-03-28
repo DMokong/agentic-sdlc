@@ -1,0 +1,53 @@
+benchmark:
+  prd: weather-transport
+  runs_per_combination: 1
+
+  constant_implementer:
+    harness: claude-code
+    model: sonnet-4-6
+    process: superpowers
+    permissions: dangerously-skip-permissions
+
+  judge:
+    model: opus-4-6
+
+  targets:
+    - id: cc-vanilla-opus
+      harness: claude-code
+      model: opus-4-6
+      process: vanilla
+
+    - id: cc-vanilla-sonnet
+      harness: claude-code
+      model: sonnet-4-6
+      process: vanilla
+
+    - id: cc-sp-opus
+      harness: claude-code
+      model: opus-4-6
+      process: superpowers
+
+    - id: cc-sp-sonnet
+      harness: claude-code
+      model: sonnet-4-6
+      process: superpowers
+
+    - id: copilot-vanilla-gpt41
+      harness: copilot-cli
+      model: gpt-4.1
+      process: vanilla
+
+    - id: copilot-sp-gpt41
+      harness: copilot-cli
+      model: gpt-4.1
+      process: superpowers
+
+    - id: copilot-vanilla-opus
+      harness: copilot-cli
+      model: opus-4-6
+      process: vanilla
+
+    - id: copilot-sp-opus
+      harness: copilot-cli
+      model: opus-4-6
+      process: superpowers
