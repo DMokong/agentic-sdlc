@@ -74,8 +74,6 @@ def compute_axis_analysis(results: list[dict]) -> dict:
     # --- Model effect: same harness + process, different model ---
     # Group by (harness, process) then compare models within each group
     model_pairs: list[dict] = []
-    from itertools import groupby
-
     hp_groups: dict[tuple, dict[str, list[float]]] = {}
     for r in results:
         key = (r.get("harness", ""), r.get("process", ""))
@@ -271,13 +269,18 @@ def _generate_insights(
 
 
 def _load_results_from_disk(run_dir: Path) -> list[dict]:
-    """Scan run_dir/specs/ and run_dir/implementations/ to reconstruct results."""
+    """Scan run_dir/implementations/ to reconstruct results (one per implementation directory).
+
+    Each implementation directory is named {target_id}-{spec_version} where spec_version
+    is either "original" or "improved". The speculator score is read from the corresponding
+    spec directory in run_dir/specs/{target_id}/.
+    """
     results: list[dict] = []
 
-    specs_dir = run_dir / "specs"
     implementations_dir = run_dir / "implementations"
+    specs_dir = run_dir / "specs"
 
-    if not specs_dir.exists():
+    if not implementations_dir.exists():
         return results
 
     # Load config to get target metadata
@@ -291,56 +294,61 @@ def _load_results_from_disk(run_dir: Path) -> list[dict]:
     for t in bench.get("targets", []):
         targets_by_id[t["id"]] = t
 
-    for spec_dir in sorted(specs_dir.iterdir()):
-        if not spec_dir.is_dir():
+    for impl_dir in sorted(implementations_dir.iterdir()):
+        if not impl_dir.is_dir():
             continue
 
-        target_id = spec_dir.name
+        # Parse target_id and spec_version from directory name: {target_id}-{version}
+        dir_name = impl_dir.name
+        # Split on last hyphen to get version suffix
+        if "-" not in dir_name:
+            continue
+        last_hyphen = dir_name.rfind("-")
+        target_id = dir_name[:last_hyphen]
+        spec_version = dir_name[last_hyphen + 1:]
 
-        # Determine spec_version: did we use original or improved?
-        iteration_log_path = spec_dir / "iteration-log.yml"
-        spec_version = "original"
+        if spec_version not in ("original", "improved"):
+            continue
+
+        # Read speculator score from the spec directory
+        spec_dir = specs_dir / target_id if specs_dir.exists() else None
         speculator_score = 0.0
         iterations_to_pass = 0
 
-        if iteration_log_path.exists():
-            log = yaml.safe_load(iteration_log_path.read_text()) or {}
-            summary = log.get("summary", {})
-            iterations_to_pass = summary.get("iterations_needed", 0)
-            final_score = summary.get("final_score", 0.0)
-            original_score = summary.get("original_score", 0.0)
-            speculator_score = final_score
-            spec_version = "improved" if iterations_to_pass > 0 else "original"
-        else:
-            # Fall back to reading the latest scorecard
-            scorecards = sorted(spec_dir.glob("scorecard-v*.yml"))
-            if scorecards:
-                sc = yaml.safe_load(scorecards[-1].read_text()) or {}
-                speculator_score = sc.get("scores", {}).get("overall", 0.0)
+        if spec_dir and spec_dir.exists():
+            iteration_log_path = spec_dir / "iteration-log.yml"
+            if iteration_log_path.exists():
+                log = yaml.safe_load(iteration_log_path.read_text()) or {}
+                summary = log.get("summary", {})
+                iterations_to_pass = summary.get("iterations_needed", 0)
+                if spec_version == "improved":
+                    speculator_score = summary.get("final_score", 0.0)
+                else:
+                    speculator_score = summary.get("original_score", 0.0)
+            else:
+                # Fall back to reading the latest scorecard
+                scorecards = sorted(spec_dir.glob("scorecard-v*.yml"))
+                if scorecards:
+                    sc = yaml.safe_load(scorecards[-1].read_text()) or {}
+                    speculator_score = sc.get("scores", {}).get("overall", 0.0)
 
         # Read judge scorecard for outcome score
-        judge_path = spec_dir / "judge-scorecard.yml"
+        judge_path = impl_dir / "judge-scorecard.yml"
         outcome_score = 0.0
-        if not judge_path.exists():
-            # Check implementations directory
-            impl_judge_path = implementations_dir / target_id / "judge-scorecard.yml"
-            if impl_judge_path.exists():
-                judge_path = impl_judge_path
-
         if judge_path.exists():
             judge_sc = yaml.safe_load(judge_path.read_text()) or {}
             scores = judge_sc.get("scores", {})
             outcome_score = scores.get("overall", 0.0)
 
         # Read functional results
-        functional_path = implementations_dir / target_id / "functional-results.yml"
+        functional_path = impl_dir / "functional-results.yml"
         functional_pass_rate = "0/0"
         if functional_path.exists():
             func = yaml.safe_load(functional_path.read_text()) or {}
             functional_pass_rate = func.get("summary", {}).get("pass_rate", "0/0")
 
         # Read timing / token metrics
-        metrics_path = implementations_dir / target_id / "metrics.json"
+        metrics_path = impl_dir / "metrics.json"
         total_tokens = 0
         total_time_seconds = 0.0
         if metrics_path.exists():
@@ -357,7 +365,7 @@ def _load_results_from_disk(run_dir: Path) -> list[dict]:
 
         # Status
         status = "completed"
-        status_path = spec_dir / "status.txt"
+        status_path = impl_dir / "status.txt"
         if status_path.exists():
             status = status_path.read_text().strip()
 

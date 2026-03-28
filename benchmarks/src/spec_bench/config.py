@@ -1,5 +1,6 @@
 """Matrix and PRD configuration loading and validation."""
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 import yaml
@@ -40,8 +41,14 @@ class PRDConfig:
     difficulty: str
     estimated_features: int
     estimated_impl_time: str
-    content: str
+    content: str        # Stripped of HTML comments — for spec generators
+    raw_content: str    # Full content including implied requirements — for the judge
     prd_dir: Path
+
+
+def _strip_html_comments(text: str) -> str:
+    """Remove HTML comment blocks from text."""
+    return re.sub(r'<!--.*?-->', '', text, flags=re.DOTALL)
 
 
 def load_matrix(path: Path) -> MatrixConfig:
@@ -95,15 +102,19 @@ def load_prd(prd_name: str, prds_dir: Path) -> PRDConfig:
     if not prd_file.exists():
         raise FileNotFoundError(f"PRD not found: {prd_file}")
 
-    content = prd_file.read_text()
+    raw_content = prd_file.read_text()
 
     # Parse YAML frontmatter
-    if content.startswith("---"):
-        _, fm, body = content.split("---", 2)
+    if raw_content.startswith("---"):
+        _, fm, body = raw_content.split("---", 2)
         meta = yaml.safe_load(fm)
     else:
         meta = {}
-        body = content
+        body = raw_content
+
+    # Strip HTML comments from content exposed to spec generators
+    # so implied requirements (IR01-IR08) are not leaked
+    content = _strip_html_comments(raw_content)
 
     return PRDConfig(
         id=meta.get("id", prd_name),
@@ -113,5 +124,6 @@ def load_prd(prd_name: str, prds_dir: Path) -> PRDConfig:
         estimated_features=meta.get("estimated_features", 0),
         estimated_impl_time=meta.get("estimated_impl_time", "unknown"),
         content=content,
+        raw_content=raw_content,
         prd_dir=prd_dir,
     )

@@ -338,6 +338,11 @@ def iterate_spec(
             # Adapter failed — stop iterating, use best so far
             break
 
+        # Adapter always writes spec.md — rename to versioned name
+        adapter_output = spec_dir / "spec.md"
+        if adapter_output.exists():
+            adapter_output.rename(next_spec)
+
         # Score the new version (only if the adapter produced it)
         if not next_spec.exists():
             # Adapter didn't produce the expected output file — stop

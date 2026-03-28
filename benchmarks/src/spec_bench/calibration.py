@@ -69,8 +69,16 @@ def run_calibration(
         "Select 3-4 implementations to review (comma-separated numbers)",
         type=str,
     )
-    indices = [int(x.strip()) - 1 for x in selection.split(",")]
-    selected = [impls[i] for i in indices if 0 <= i < len(impls)]
+    try:
+        indices = [int(x.strip()) - 1 for x in selection.split(",")]
+        selected = [impls[i] for i in indices if 0 <= i < len(impls)]
+    except ValueError:
+        click.echo("Invalid selection — expected comma-separated numbers (e.g. 1,2,3).")
+        return {}
+
+    if not selected:
+        click.echo("No valid implementations selected.")
+        return {}
 
     reviews = []
     for impl in selected:

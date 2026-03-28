@@ -168,11 +168,13 @@ def test_iterate_spec_improves_after_feedback(tmp_path):
             return failing
         return passing
 
+    def mock_adapter_side_effect(*args, **kwargs):
+        # Simulate the adapter writing spec.md (which iterate_spec will rename to spec-v1.md)
+        (spec_dir / "spec.md").write_text("# Improved spec")
+        return MagicMock(returncode=0, stdout="", stderr="")
+
     with patch("spec_bench.scoring.score_spec", side_effect=mock_score_side_effect), \
-         patch("spec_bench.scoring.subprocess.run") as mock_adapter:
-        mock_adapter.return_value = MagicMock(returncode=0, stdout="", stderr="")
-        # Create the v1 spec that the adapter "produces"
-        (spec_dir / "spec-v1.md").write_text("# Improved spec")
+         patch("spec_bench.scoring.subprocess.run", side_effect=mock_adapter_side_effect):
 
         result = iterate_spec(
             target=target,

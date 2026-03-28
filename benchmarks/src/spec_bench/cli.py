@@ -3,7 +3,7 @@
 import click
 from pathlib import Path
 
-from .config import load_matrix, load_prd
+from .config import load_matrix, load_prd, Target
 from .orchestrator import create_run_directory, run_target
 from .scoring import iterate_spec
 from .review import run_functional_tests, run_judge
@@ -129,9 +129,35 @@ def run(ctx, prd, matrix, runs):
                 continue
 
             click.echo(f"  Implementing ({spec_version})...")
-            # TODO: Run constant implementer here
-            # For now, log that implementation would happen
-            click.echo(f"    Implementation placeholder — will invoke constant implementer")
+
+            # Invoke constant implementer
+            impl_target = Target(
+                id=f"{target.id}-{spec_version}",
+                harness=config.constant_implementer.harness,
+                model=config.constant_implementer.model,
+                process=config.constant_implementer.process,
+            )
+
+            # Write the spec as the prompt for the implementer
+            impl_prompt_path = impl_dir / "impl-prompt.md"
+            impl_prompt_path.write_text(
+                f"Implement this specification exactly. Use Vite + React + TypeScript + Tailwind.\n\n"
+                f"{spec_file.read_text()}"
+            )
+
+            superpowers_path = bench_dir / ".superpowers" / "superpowers.md"
+            impl_result = run_target(
+                target=impl_target,
+                output_dir=impl_dir / "app",
+                prd_path=impl_prompt_path,
+                template_path=template_path,
+                prompt_path=None,
+                adapters_dir=adapters_dir,
+                superpowers_path=superpowers_path if impl_target.process == "superpowers" else None,
+            )
+
+            if impl_result.status == "adapter_failed":
+                click.echo(f"  Implementer failed: {impl_result.error}")
 
             # Phase 3: Review (functional tests + judge)
             # Only run if implementation produced an app
