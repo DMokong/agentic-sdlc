@@ -76,7 +76,16 @@ if [[ "$CLAUDE_BIN" == *"node_modules"* ]]; then
   CLAUDE_BIN="$HOME/.local/bin/claude"
 fi
 
-CLAUDE_CMD=("$CLAUDE_BIN" -p "$FULL_PROMPT" --model "$MODEL" --dangerously-skip-permissions)
+# Map matrix model IDs to Claude CLI model identifiers
+# Claude CLI accepts aliases (sonnet, opus) or full names (claude-sonnet-4-6)
+case "$MODEL" in
+  sonnet-4-6|sonnet)  CLAUDE_MODEL="sonnet" ;;
+  opus-4-6|opus)      CLAUDE_MODEL="opus" ;;
+  claude-*)           CLAUDE_MODEL="$MODEL" ;;  # Already a full name
+  *)                  CLAUDE_MODEL="$MODEL" ;;  # Pass through as-is
+esac
+
+CLAUDE_CMD=("$CLAUDE_BIN" -p "$FULL_PROMPT" --model "$CLAUDE_MODEL" --dangerously-skip-permissions)
 
 if [[ -n "$SUPERPOWERS" ]]; then
   CLAUDE_CMD+=(--plugin-dir "$SUPERPOWERS")

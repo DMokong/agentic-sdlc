@@ -394,7 +394,10 @@ def _load_results_from_disk(run_dir: Path) -> list[dict]:
 
 def _build_rankings(results: list[dict]) -> list[dict]:
     """Sort results by outcome_score descending and assign ranks."""
-    sorted_results = sorted(results, key=lambda r: r["outcome_score"], reverse=True)
+    # Filter out adapter-failed results that have no outcome_score
+    scoreable = [r for r in results if "outcome_score" in r]
+    failed = [r for r in results if "outcome_score" not in r]
+    sorted_results = sorted(scoreable, key=lambda r: r["outcome_score"], reverse=True)
     rankings = []
     for rank, r in enumerate(sorted_results, start=1):
         rankings.append({
@@ -408,6 +411,20 @@ def _build_rankings(results: list[dict]) -> list[dict]:
             "total_tokens": r.get("total_tokens", 0),
             "total_time_seconds": r.get("total_time_seconds", 0.0),
             "status": r.get("status", "completed"),
+        })
+    # Append failed entries at the end (no rank)
+    for r in failed:
+        rankings.append({
+            "rank": None,
+            "target": r.get("target", "unknown"),
+            "spec_version": r.get("spec_version", "n/a"),
+            "speculator_score": 0.0,
+            "outcome_score": 0.0,
+            "functional_pass_rate": "0/0",
+            "iterations_to_pass": 0,
+            "total_tokens": 0,
+            "total_time_seconds": 0.0,
+            "status": r.get("status", "adapter_failed"),
         })
     return rankings
 
