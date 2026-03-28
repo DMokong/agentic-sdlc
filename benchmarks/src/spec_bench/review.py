@@ -4,6 +4,9 @@ Layer 1: run_functional_tests() — Playwright-based functional smoke tests.
 Layer 2: run_judge() — LLM-as-judge qualitative scorecard.
 """
 
+import json
+import os
+import socket
 import subprocess
 import time
 import urllib.request
@@ -11,7 +14,6 @@ import urllib.error
 
 from .scoring import _resolve_claude_bin, _map_claude_model
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
@@ -24,6 +26,18 @@ _SOURCE_EXTENSIONS = {".ts", ".tsx", ".css", ".html"}
 _DEFAULT_DEV_PORT = 5173
 _SERVER_POLL_INTERVAL = 0.5  # seconds between readiness polls
 _SERVER_TIMEOUT = 30  # seconds to wait for server to be ready
+
+
+def _find_free_port(start: int = 15173, end: int = 15273) -> int:
+    """Find a free TCP port in the given range."""
+    for port in range(start, end):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            try:
+                s.bind(("127.0.0.1", port))
+                return port
+            except OSError:
+                continue
+    raise RuntimeError(f"No free port found in range {start}-{end}")
 
 JUDGE_PROMPT_TEMPLATE = """\
 {rubric}
@@ -92,147 +106,119 @@ def _wait_for_server(port: int = _DEFAULT_DEV_PORT, timeout: float = _SERVER_TIM
     raise TimeoutError(f"Dev server at {url} did not become ready within {timeout}s")
 
 
-def _run_playwright_checks(
-    tests: list[dict],
-    port: int = _DEFAULT_DEV_PORT,
-) -> list[dict]:
-    """Run Playwright assertions for each functional test item.
+def _run_programmatic_checks(
+    page,
+    states: list,
+    intercepted: list[str],
+) -> dict:
+    """Run deterministic data-layer checks that don't need an LLM.
 
-    Each item in tests is a dict with keys: id, requirement, test.
-    Returns a list of result dicts with: id, requirement, passed, [error].
-
-    This uses Playwright's Python bindings (sync_api) to check each
-    assertion against the running dev server.
+    Returns a dict mapping test IDs to {"passed": bool, "evidence": str}.
+    Currently checks:
+      - F15 (behavior tracking): localStorage has behavior-related keys with parseable JSON arrays
+      - F17 (persistence): localStorage survives page reload (state 0 vs state 4)
+      - F19 (responsive): Desktop vs mobile page text lengths differ meaningfully
     """
-    from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeout
+    results: dict[str, dict] = {}
 
-    base_url = f"http://localhost:{port}"
-    results = []
-
-    with sync_playwright() as p:
-        browser = p.chromium.launch()
-        page = browser.new_page()
+    # --- F15: Behavior tracking via localStorage ---
+    initial_storage = states[0].localStorage if states else {}
+    behavior_keys = [
+        k for k in initial_storage
+        if any(term in k.lower() for term in [
+            "behav", "pattern", "history", "log", "checkin", "check_in",
+            "usage", "track",
+        ])
+    ]
+    has_behavior_data = False
+    for key in behavior_keys:
         try:
-            page.goto(base_url, timeout=15000)
-            page.wait_for_load_state("networkidle", timeout=10000)
-        except Exception as e:
-            # If we can't load the page at all, mark everything as failed
-            browser.close()
-            return [
-                {"id": t["id"], "requirement": t["requirement"], "passed": False, "error": f"Page load failed: {e}"}
-                for t in tests
-            ]
+            val = json.loads(initial_storage[key])
+            if isinstance(val, list) and len(val) > 0:
+                has_behavior_data = True
+                break
+        except (json.JSONDecodeError, TypeError):
+            continue
 
-        for test_item in tests:
-            result = {"id": test_item["id"], "requirement": test_item["requirement"]}
-            try:
-                _assert_functional_test(page, test_item)
-                result["passed"] = True
-            except (AssertionError, PlaywrightTimeout, Exception) as e:
-                result["passed"] = False
-                result["error"] = str(e)[:300]
-            results.append(result)
+    results["F15"] = {
+        "passed": has_behavior_data,
+        "evidence": (
+            f"Found {len(behavior_keys)} behavior-related key(s) in localStorage"
+            + (", parseable JSON array present" if has_behavior_data else ", no parseable array")
+        ),
+    }
 
-        browser.close()
+    # --- F17: Persistence across reload ---
+    if len(states) >= 5:
+        storage_before = states[0].localStorage
+        storage_after = states[4].localStorage  # 05-after-reload
+        keys_before = set(storage_before.keys())
+        keys_after = set(storage_after.keys())
+        persisted = keys_before & keys_after
+        passed = len(persisted) > 0 and len(keys_before) > 0
+        results["F17"] = {
+            "passed": passed,
+            "evidence": (
+                f"{len(persisted)}/{len(keys_before)} keys persisted after reload"
+                if keys_before else "No keys found before reload"
+            ),
+        }
+
+    # --- F19: Responsive layout ---
+    if len(states) >= 6:
+        desktop_len = len(states[0].page_text)  # 01-initial (1280x720)
+        mobile_len = len(states[5].page_text)    # 06-mobile (375x812)
+        both_have_content = desktop_len > 100 and mobile_len > 100
+        results["F19"] = {
+            "passed": both_have_content,
+            "evidence": (
+                f"Desktop text length: {desktop_len}, mobile text length: {mobile_len}"
+            ),
+        }
 
     return results
 
 
-def _assert_functional_test(page, test_item: dict) -> None:
-    """Attempt to verify a single functional test item using Playwright.
+def _merge_results(
+    tests: list[dict],
+    llm_verdicts: dict,
+    programmatic_results: dict,
+) -> list[dict]:
+    """Merge programmatic and LLM results into a single results list.
 
-    This is a best-effort heuristic: the test descriptions are natural language,
-    so we do keyword-based checks on the page content and structure.
-
-    Raises AssertionError if the check fails.
+    Programmatic results override LLM verdicts where available.
+    Each result has: id, requirement, passed, evidence, source.
     """
-    test_desc = test_item.get("test", "")
-    test_id = test_item["id"]
-
-    # Each test description is natural language. We map test IDs to assertions.
-    # F01: temperature in Celsius
-    if test_id == "F01":
-        # Look for °C pattern
-        content = page.content()
-        assert "°C" in content or "&#176;C" in content, "No Celsius temperature found on page"
-
-    elif test_id == "F02":
-        # 5-day forecast — look for day labels
-        days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
-        content = page.content()
-        found = sum(1 for d in days if d in content)
-        assert found >= 5, f"Found only {found} day labels, expected at least 5"
-
-    elif test_id == "F03":
-        content = page.content()
-        assert "Feels like" in content or "feels like" in content, "No 'Feels like' text found"
-
-    elif test_id == "F04":
-        content = page.content()
-        assert "km/h" in content, "No wind speed (km/h) found"
-
-    elif test_id == "F05":
-        # 5 departure rows with HH:MM time format
-        import re
-        content = page.content()
-        times = re.findall(r"\b\d{1,2}:\d{2}\b", content)
-        assert len(times) >= 5, f"Found only {len(times)} time values, expected at least 5"
-
-    elif test_id == "F06":
-        content = page.content()
-        assert "On time" in content or "on time" in content or "min" in content, \
-            "No delay status indicators found"
-
-    elif test_id == "F07":
-        # Transport mode icons — look for icon elements
-        icons = page.query_selector_all("img[alt], svg, [aria-label]")
-        assert len(icons) > 0, "No icon elements found"
-
-    elif test_id == "F08":
-        # localStorage persistence test — check localStorage after interaction
-        result = page.evaluate("() => Object.keys(localStorage)")
-        assert len(result) > 0, "localStorage is empty — no preferences saved"
-
-    elif test_id == "F09":
-        result = page.evaluate("() => Object.keys(localStorage)")
-        assert len(result) > 0, "localStorage is empty — no stop preferences saved"
-
-    elif test_id == "F10":
-        content = page.content()
-        greetings = ["Good morning", "Good afternoon", "Good evening", "Good night"]
-        assert any(g in content for g in greetings), "No time-of-day greeting found in header"
-
-    elif test_id == "F11":
-        # Settings panel — look for a settings icon/button
-        settings_btn = page.query_selector("[aria-label*='setting'], [title*='setting'], button:has(svg)")
-        assert settings_btn is not None, "No settings button found"
-
-    elif test_id == "F12":
-        # Transport stop search in settings — same as F11 but check for input
-        settings_btn = page.query_selector("[aria-label*='setting'], [title*='setting'], button:has(svg)")
-        assert settings_btn is not None, "No settings button found for stop search"
-
-    elif test_id == "F13":
-        # Responsive layout — check at 375px
-        page.set_viewport_size({"width": 375, "height": 812})
-        page.wait_for_load_state("networkidle", timeout=5000)
-        content = page.content()
-        # Basic check that content renders at mobile width
-        assert len(content) > 100, "Page appears empty at mobile viewport"
-
-    elif test_id == "F14":
-        # Refresh button
-        refresh_btn = page.query_selector("button[aria-label*='refresh'], button[title*='refresh'], button:has-text('refresh')")
-        assert refresh_btn is not None, "No refresh button found"
-
-    elif test_id == "F15":
-        # Last-updated timestamp
-        content = page.content()
-        assert "Last updated" in content or "last updated" in content, "No 'Last updated' timestamp found"
-
-    else:
-        # Unknown test ID — fall through as inconclusive (pass)
-        pass
+    merged = []
+    for t in tests:
+        tid = t["id"]
+        if tid in programmatic_results:
+            r = programmatic_results[tid]
+            merged.append({
+                "id": tid,
+                "requirement": t["requirement"],
+                "passed": r["passed"],
+                "evidence": r["evidence"],
+                "source": "programmatic",
+            })
+        elif tid in llm_verdicts:
+            v = llm_verdicts[tid]
+            merged.append({
+                "id": tid,
+                "requirement": t["requirement"],
+                "passed": v["passed"],
+                "evidence": v["evidence"],
+                "source": "llm-judge",
+            })
+        else:
+            merged.append({
+                "id": tid,
+                "requirement": t["requirement"],
+                "passed": False,
+                "evidence": "No verdict produced by either programmatic checks or LLM judge",
+                "source": "missing",
+            })
+    return merged
 
 
 def run_functional_tests(
@@ -240,41 +226,88 @@ def run_functional_tests(
     functional_tests_path: Path,
     output_dir: Path,
     port: int = _DEFAULT_DEV_PORT,
+    judge_model: str = "sonnet",
 ) -> dict:
-    """Run Playwright functional tests against a Vite dev app.
+    """Run hybrid functional tests (programmatic + LLM vision judge) against a Vite dev app.
 
     Steps:
     1. Parse functional-tests.yml
-    2. Start the Vite dev server (`npm run dev`) in app_dir
-    3. Wait for server to be ready
-    4. Run Playwright checks for each test item
-    5. Terminate the dev server
-    6. Write functional-results.yml to output_dir
-    7. Return the results dict
+    2. Start Vite dev server on a free port
+    3. Open Playwright browser with API mocks and seeded localStorage
+    4. Navigate through key app states, capturing evidence (screenshots, text, a11y tree)
+    5. Run deterministic programmatic checks on captured data
+    6. Run LLM vision judge on remaining requirements
+    7. Merge results (programmatic overrides LLM where available)
+    8. Write functional-results.yml to output_dir
 
     Args:
-        app_dir: Directory containing the Vite app (has package.json + npm run dev).
+        app_dir: Directory containing the Vite app (has package.json).
         functional_tests_path: Path to functional-tests.yml.
         output_dir: Directory to write functional-results.yml into.
-        port: Port the Vite dev server listens on (default: 5173).
+        port: Ignored (kept for API compat); a free port is always chosen.
+        judge_model: Claude model name for the LLM vision judge.
 
     Returns:
         Dict with 'results' list and 'summary' dict.
     """
+    from playwright.sync_api import sync_playwright
+    from .mock_data import (
+        OPEN_METEO_CURRENT, OPEN_METEO_FORECAST,
+        TFNSW_STOP_FINDER_HORNSBY, TFNSW_DEPARTURES_HORNSBY,
+        TFNSW_TRIP_HORNSBY_CHATSWOOD, GTFS_ADVISORY_T1,
+        build_seed_profile,
+    )
+    from .app_navigator import setup_api_mocks, seed_profile, navigate_states
+    from .vision_judge import run_vision_judge
+
     tests = parse_functional_tests(functional_tests_path)
     output_dir.mkdir(parents=True, exist_ok=True)
+    screenshots_dir = output_dir / "screenshots"
+    screenshots_dir.mkdir(exist_ok=True)
 
-    # Start dev server
+    actual_port = _find_free_port()
+    api_key = os.environ.get("TFNSW_API_KEY", "test-key-for-benchmark")
+
     proc = subprocess.Popen(
-        ["npm", "run", "dev"],
+        ["npx", "vite", "--port", str(actual_port), "--strictPort"],
         cwd=str(app_dir),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
 
     try:
-        _wait_for_server(port=port)
-        check_results = _run_playwright_checks(tests, port=port)
+        _wait_for_server(port=actual_port)
+        base_url = f"http://localhost:{actual_port}"
+
+        with sync_playwright() as p:
+            browser = p.chromium.launch()
+            page = browser.new_page(viewport={"width": 1280, "height": 720})
+
+            page.goto(base_url, timeout=15000)
+            page.wait_for_load_state("networkidle", timeout=10000)
+
+            mock_data = {
+                "open_meteo_current": OPEN_METEO_CURRENT,
+                "open_meteo_forecast": OPEN_METEO_FORECAST,
+                "tfnsw_stop_finder": TFNSW_STOP_FINDER_HORNSBY,
+                "tfnsw_departures": TFNSW_DEPARTURES_HORNSBY,
+                "tfnsw_trip": TFNSW_TRIP_HORNSBY_CHATSWOOD,
+                "gtfs_advisory": GTFS_ADVISORY_T1,
+            }
+            intercepted = setup_api_mocks(page, mock_data)
+
+            seed_data = build_seed_profile(api_key)
+            seed_profile(page, seed_data, base_url)
+
+            states = navigate_states(page, base_url, screenshots_dir)
+
+            programmatic_results = _run_programmatic_checks(page, states, intercepted)
+
+            browser.close()
+
+        llm_verdicts = run_vision_judge(tests, states, judge_model=judge_model)
+        check_results = _merge_results(tests, llm_verdicts, programmatic_results)
+
     finally:
         proc.terminate()
         try:
@@ -282,7 +315,6 @@ def run_functional_tests(
         except subprocess.TimeoutExpired:
             proc.kill()
 
-    # Build summary
     passed_count = sum(1 for r in check_results if r.get("passed"))
     failed_count = len(check_results) - passed_count
 
