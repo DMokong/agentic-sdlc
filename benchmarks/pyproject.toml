@@ -1,0 +1,30 @@
+[project]
+name = "spec-bench"
+version = "0.1.0"
+description = "Benchmark harness for Speculator spec quality evaluation"
+requires-python = ">=3.12"
+dependencies = [
+    "click>=8.1",
+    "pyyaml>=6.0",
+    "scipy>=1.14",
+    "jinja2>=3.1",
+    "playwright>=1.49",
+]
+
+[project.scripts]
+spec-bench = "spec_bench.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/spec_bench"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
