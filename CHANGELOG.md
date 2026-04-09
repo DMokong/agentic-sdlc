@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.6.0 — Gate 3: Skill Description Eval
+
+### Added
+- **Skill description check** in Gate 3 — when `SKILL.md` or `AGENT.md` files appear in the diff, Gate 3 now runs a conditional description eval: generates mental trigger queries (5 should-trigger, 5 near-miss negatives), evaluates undertrigger/overtrigger risk, rates pass/fail/skipped
+- **`skill_description` field** in `gate-3-review.yml` schema — `pass | fail | skipped` (skipped when no skill files are in the diff)
+- A `fail` on `skill_description` is a blocking issue — undertriggering descriptions render skills useless
+
+### Fixed
+- Gate 3 previously had no check for skill quality when specs created or modified SKILL.md/AGENT.md files — description quality was invisible to the review gate
+
 ## 2.5.0 — Security Uplift: Mandatory Secrets Scan
 
 ### Added
