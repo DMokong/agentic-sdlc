@@ -77,7 +77,18 @@ When running Gate 3:
 1. **Read the review rubric** at `${CLAUDE_PLUGIN_ROOT}/rubrics/review.md` and evaluate the implementation against each checklist item.
 2. **Run the mandatory secrets scan** described in the rubric's Security section — actively grep for hardcoded secrets before evaluating the security dimension.
 3. For each checklist area, assess the code and record findings.
-3. Write evidence to `{spec_dir}/{spec_name}/evidence/gate-3-review.yml` with the following structure:
+4. **Skill description check** (conditional — only when `SKILL.md` or `AGENT.md` files appear in the diff):
+   - Run `git diff --name-only` against the base branch to check for modified/added skill files.
+   - If **no** skill files are in the diff: set `skill_description: skipped` and continue.
+   - If skill files **are** in the diff: for each modified `SKILL.md` or `AGENT.md`:
+     1. Read the `description` frontmatter field.
+     2. Generate 10 mental eval queries — 5 should-trigger (varied phrasings, including indirect requests) and 5 should-not-trigger near-misses (adjacent domains, keyword overlap but wrong intent).
+     3. Evaluate each query: does the description cause the skill to trigger correctly?
+     4. Check for undertrigger risk (description too narrow — legitimate uses won't trigger) and overtrigger risk (triggers on unrelated adjacent queries).
+     5. Rate as `pass` (triggers reliably, good negative discrimination) or `fail` (undertriggers, overtriggers, or description is vague).
+     6. Record any suggested improvements in `observations`.
+   - Record the result in `skill_description` in the evidence file.
+5. Write evidence to `{spec_dir}/{spec_name}/evidence/gate-3-review.yml` with the following structure:
 
 ```yaml
 gate: review
@@ -90,11 +101,14 @@ checks:
   security: pass | fail
   performance: pass | fail
   spec_alignment: pass | fail
+  skill_description: pass | fail | skipped  # skipped when no SKILL.md/AGENT.md in diff
 observations:
   - "Free-text observations about the implementation"
 blocking_issues:
   - "Any issues that must be fixed before passing (empty if result is pass)"
 ```
+
+> **Note**: A `fail` on `skill_description` is a blocking issue — descriptions that undertrigger render skills useless.
 
 ## Gate 4: Evidence Package
 
