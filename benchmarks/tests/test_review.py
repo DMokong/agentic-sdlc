@@ -289,30 +289,53 @@ def test_run_judge_validates_model():
 
 # --- run_functional_tests ---
 
+def _mock_playwright_infra(mock_popen_return=None):
+    """Return a context manager stack that mocks all playwright + navigator dependencies."""
+    from contextlib import ExitStack
+    from unittest.mock import patch, MagicMock
+
+    mock_pw_ctx = MagicMock()
+    mock_browser = MagicMock()
+    mock_page = MagicMock()
+    mock_browser.new_page.return_value = mock_page
+    mock_pw_ctx.chromium.launch.return_value = mock_browser
+
+    stack = ExitStack()
+    popen_mock = stack.enter_context(
+        patch("spec_bench.review.subprocess.Popen",
+              return_value=mock_popen_return or MagicMock())
+    )
+    stack.enter_context(patch("spec_bench.review._wait_for_server"))
+    pw_mock = stack.enter_context(patch("playwright.sync_api.sync_playwright"))
+    pw_mock.return_value.__enter__.return_value = mock_pw_ctx
+    stack.enter_context(patch("spec_bench.app_navigator.setup_api_mocks", return_value=[]))
+    stack.enter_context(patch("spec_bench.app_navigator.seed_profile"))
+    stack.enter_context(patch("spec_bench.app_navigator.navigate_states", return_value=[]))
+    stack.enter_context(patch("spec_bench.review._run_programmatic_checks", return_value={}))
+    stack.enter_context(patch("spec_bench.vision_judge.run_vision_judge", return_value={}))
+    return stack, popen_mock
+
+
 def test_run_functional_tests_produces_results_file(tmp_path):
     """run_functional_tests writes functional-results.yml with expected structure."""
     from spec_bench.review import run_functional_tests
 
     functional_tests_path = tmp_path / "functional-tests.yml"
     functional_tests_path.write_text(SAMPLE_FUNCTIONAL_TESTS)
-
     app_dir = tmp_path / "app"
     app_dir.mkdir()
     output_dir = tmp_path / "output"
     output_dir.mkdir()
 
-    # Mock the server process and Playwright
-    with patch("spec_bench.review.subprocess.Popen") as mock_popen, \
-         patch("spec_bench.review._wait_for_server") as mock_wait, \
-         patch("spec_bench.review._run_playwright_checks") as mock_playwright:
+    merged = [
+        {"id": "F01", "requirement": "R01: Display current temperature",
+         "passed": True, "evidence": "ok", "source": "programmatic"},
+        {"id": "F02", "requirement": "R02: Show 5-day forecast",
+         "passed": False, "evidence": "Element not found", "source": "llm-judge"},
+    ]
 
-        mock_popen.return_value = MagicMock()
-        mock_wait.return_value = None
-        mock_playwright.return_value = [
-            {"id": "F01", "requirement": "R01: Display current temperature", "passed": True},
-            {"id": "F02", "requirement": "R02: Show 5-day forecast", "passed": False, "error": "Element not found"},
-        ]
-
+    with _mock_playwright_infra()[0], \
+         patch("spec_bench.review._merge_results", return_value=merged):
         results = run_functional_tests(
             app_dir=app_dir,
             functional_tests_path=functional_tests_path,
@@ -327,7 +350,7 @@ def test_run_functional_tests_produces_results_file(tmp_path):
 
 
 def test_run_functional_tests_result_structure(tmp_path):
-    """Each result entry has id, requirement, passed — and error if failed."""
+    """Each result entry has id, requirement, passed, evidence, and source."""
     from spec_bench.review import run_functional_tests
 
     functional_tests_path = tmp_path / "functional-tests.yml"
@@ -337,16 +360,15 @@ def test_run_functional_tests_result_structure(tmp_path):
     output_dir = tmp_path / "output"
     output_dir.mkdir()
 
-    with patch("spec_bench.review.subprocess.Popen") as mock_popen, \
-         patch("spec_bench.review._wait_for_server"), \
-         patch("spec_bench.review._run_playwright_checks") as mock_playwright:
+    merged = [
+        {"id": "F01", "requirement": "R01: Display current temperature",
+         "passed": True, "evidence": "Temperature element found", "source": "programmatic"},
+        {"id": "F02", "requirement": "R02: Show 5-day forecast",
+         "passed": False, "evidence": "Timeout: forecast section not found", "source": "llm-judge"},
+    ]
 
-        mock_popen.return_value = MagicMock()
-        mock_playwright.return_value = [
-            {"id": "F01", "requirement": "R01: Display current temperature", "passed": True},
-            {"id": "F02", "requirement": "R02: Show 5-day forecast", "passed": False, "error": "Timeout"},
-        ]
-
+    with _mock_playwright_infra()[0], \
+         patch("spec_bench.review._merge_results", return_value=merged):
         results = run_functional_tests(
             app_dir=app_dir,
             functional_tests_path=functional_tests_path,
@@ -358,9 +380,10 @@ def test_run_functional_tests_result_structure(tmp_path):
 
     assert f01["passed"] is True
     assert "error" not in f01
+    assert f01["evidence"] == "Temperature element found"
 
     assert f02["passed"] is False
-    assert f02["error"] == "Timeout"
+    assert "Timeout" in f02["evidence"]
 
 
 def test_run_functional_tests_stops_server(tmp_path):
@@ -375,13 +398,9 @@ def test_run_functional_tests_stops_server(tmp_path):
     output_dir.mkdir()
 
     mock_proc = MagicMock()
+    stack, _ = _mock_playwright_infra(mock_popen_return=mock_proc)
 
-    with patch("spec_bench.review.subprocess.Popen", return_value=mock_proc), \
-         patch("spec_bench.review._wait_for_server"), \
-         patch("spec_bench.review._run_playwright_checks") as mock_playwright:
-
-        mock_playwright.return_value = []
-
+    with stack, patch("spec_bench.review._merge_results", return_value=[]):
         run_functional_tests(
             app_dir=app_dir,
             functional_tests_path=functional_tests_path,
