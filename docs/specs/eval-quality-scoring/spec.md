@@ -1,6 +1,6 @@
 ---
 id: SPEC-001
-status: draft
+status: approved
 author: Dustin Cheng
 date: 2026-04-15
 epic: speculator-icu
