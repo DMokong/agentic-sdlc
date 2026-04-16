@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.8.0 — Eval-First SDLC: Pre-Implementation Eval Authoring (SPEC-040)
+
+### Added
+- **Phase 2a: Eval Authoring** — new pipeline phase between planning and implementation; evals are intent artifacts (markdown files) describing observable user outcomes, stored in `docs/specs/{feature}/evals/`
+- **`eval-intent-scorer` agent** — LLM-as-judge that scores eval sets on 4 dimensions: intent coverage, anti-pattern detection, journey completeness, implementation independence; checks SYSTEM-SPEC.md for conflicts and scans prior spec evals for regression signals
+- **`eval-authoring` skill** — `/sdlc eval` command for interactive and full-auto eval authoring with feedback loop, partial session recovery, and override support
+- **`rubrics/eval-intent.md`** — 4-dimension rubric with calibration bands at 1-3, 4-6, 7-8, 9-10; format matches spec-quality.md
+- **`skills/sdlc-run/references/phase-eval-authoring.md`** — Phase 2a reference for the sdlc-run orchestrator
+- **Gate 2a** in pipeline position detection — `gate-2a-eval-intent.yml` as the evidence artifact
+- **`/sdlc eval` route** in master routing table; `eval-intent` gate in gate-check
+- **Opt-in config**: `gates.eval-intent.enabled: true` in `sdlc.local.md`; threshold defaults to 6.5, max_eval_retries to 3
+- **SYSTEM-SPEC.md conflict detection** — blocking conflicts with crystallized behaviors surface during authoring; three resolution paths
+- **Prior eval regression scanning** — scans `docs/specs/*/evals/` from prior specs; failures are reported, not silently ignored
+- **Partial session recovery** — interrupted eval authoring sessions resume from last completed AC via `.eval-session-partial` marker
+
+### Changed
+- `sdlc-run/SKILL.md` pipeline position detection table: added Phase 2a row between Phase 2 and Phase 3; Phase 3 condition now requires gate 2a satisfied (or disabled)
+- `skills/sdlc/SKILL.md` routing table: added `/sdlc eval` → `eval-authoring` route
+- `skills/gate-check/SKILL.md`: added `eval-intent` gate (Gate 2a) to valid gates, status check, and missing-evidence handlers
+
 ## 2.7.0 — Gate 2b: Eval Quality Scoring
 
 ### Added
