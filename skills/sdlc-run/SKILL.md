@@ -69,11 +69,14 @@ After resolving the spec, determine where the pipeline left off by checking evid
 |-------|-----------|----------------|
 | 1 | No `evidence/gate-1-scorecard.yml` | Phase 1: Scoring |
 | 2 | Scorecard exists, no plan in `docs/plans/` matching this spec | Phase 2: Planning |
-| 3 | Plan exists, no `evidence/gate-2-quality.yml` | Phase 3: Implementation + Gate 2 |
+| 2a | Plan exists, `eval-intent.enabled: true`, no `evidence/gate-2a-eval-intent.yml` | Phase 2a: Eval Authoring |
+| 3 | Plan exists, gate 2a satisfied (or disabled), no `evidence/gate-2-quality.yml` | Phase 3: Implementation + Gate 2 |
 | 3a | Gate 2 exists, `eval-quality.enabled: true`, no `evidence/gate-2b-eval-quality.yml` | Phase 3a: Eval Quality (Gate 2b) |
 | 4 | Gate 2 exists (and 2b if enabled), no `evidence/gate-3-review.yml` | Phase 4: Review |
 | 5 | Gate 3 exists, no `evidence/gate-4-summary.yml` | Phase 5: Close |
 | 6 | All required gates exist | Pipeline complete — nothing to do |
+
+"Gate 2a satisfied" means: either `gates.eval-intent.enabled` is false/absent in sdlc.local.md, OR `evidence/gate-2a-eval-intent.yml` exists with `result: pass` or `result: override-pass`.
 
 Announce which phase will start:
 ```
@@ -136,6 +139,11 @@ Each phase below has detailed procedural steps in a dedicated reference file. Th
 ### Phase 2: Plan Creation
 Create implementation plan via `writing-plans` skill, generate beads stories, handle Guided/Full Auto mode differences.
 → Read `references/phase-planning.md` for detailed steps.
+
+### Phase 2a: Eval Authoring (Gate 2a)
+Run only when `gates.eval-intent.enabled: true` in `.claude/sdlc.local.md`.
+Authors pre-implementation intent evals, scores them, checks SYSTEM-SPEC.md compatibility, and validates prior spec regression signals.
+→ Read `references/phase-eval-authoring.md` for detailed steps.
 
 ### Phase 3: Implementation + Gate 2
 Execute plan via `subagent-driven-development`, run Gate 2 (code quality), self-heal loop for test failures (max `max_code_retries` attempts).
