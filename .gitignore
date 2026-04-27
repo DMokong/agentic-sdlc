@@ -1,0 +1,39 @@
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+.coverage
+htmlcov/
+
+# Node / Remotion
+node_modules/
+
+# Spec-Bench video sub-project — Remotion build outputs + heavyweight assets
+# (source lives under benchmarks/spec-bench-video/src/ but is excluded
+#  for now to keep the repo lean; track separately if/when stable)
+benchmarks/spec-bench-video/
+
+# Cross-workspace pollution — these belong in the parent claudeclaw repo,
+# not duplicated under benchmarks/
+benchmarks/docs/
+
+# Generated reports — sources of truth are the *.yml results; HTML dashboards
+# are regenerated from them via benchmarks/templates/report.html.j2
+benchmarks/results/*.html
+
+# SDLC ephemera — per-spec session locks (see lib/spec-resolution.md)
+docs/specs/**/.active
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
