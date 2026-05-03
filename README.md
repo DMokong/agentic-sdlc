@@ -363,7 +363,9 @@ For existing projects adopting drift detection:
 
 ## Configuration
 
-Project-side config lives in `.claude/sdlc.local.md` (YAML frontmatter):
+Project-side config lives in `.claude/sdlc.local.md` (YAML frontmatter). `/spec doctor --init` generates a default file; edit the YAML to tune thresholds, enable opt-in gates, or change scoring weights.
+
+### Required gates (always on)
 
 ```yaml
 # Directory where specs are created (relative to project root)
@@ -375,7 +377,7 @@ evidence_dir: evidence
 # Gate definitions and thresholds
 gates:
   spec-quality:
-    threshold: 7.0        # minimum average score (1-10) to pass
+    threshold: 7.0         # minimum average score (1-10) to pass
     required: true         # block pipeline if gate fails
   code-quality:
     tests_required: true   # require test files to exist
@@ -416,6 +418,39 @@ run:
     - deploy
     - payment
 ```
+
+### Opt-in gates
+
+Two additional gates are opt-in. They are disabled by default and have to be turned on explicitly by adding their config blocks under `gates:` in `.claude/sdlc.local.md`:
+
+```yaml
+# Add these blocks under `gates:` to enable
+gates:
+  # ... required gates above ...
+
+  eval-intent:                    # Gate 2a — pre-implementation intent capture (v2.8.0)
+    enabled: true                 # default: false. Set true to run /spec eval as a phase.
+    threshold: 6.5                # minimum overall score (1-10) to pass
+    per_dimension_minimum: 4      # any dimension below this fails the gate
+    max_eval_retries: 3           # auto-improvement attempts before escalating
+
+  eval-quality:                   # Gate 2b — post-implementation eval quality (v2.7.0)
+    enabled: true                 # default: false. Runs after Gate 2.
+    threshold: 6.5
+    per_dimension_minimum: 4
+```
+
+When enabled, these gates insert into the pipeline as follows:
+
+```
+Gate 1 → [Gate 2a if enabled] → Plan → Impl → Gate 2 → [Gate 2b if enabled] → Gate 3 → Gate 4
+```
+
+You can enable them independently — Gate 2a without 2b, 2b without 2a, or both. See the per-gate sections under [Gate Pipeline](#gate-pipeline) for what each gate evaluates.
+
+### Bootstrapping
+
+Run `/spec doctor --init` in a fresh project to generate a default `.claude/sdlc.local.md`. The default file ships the required-gate blocks only; uncomment or add the opt-in blocks above when you want to turn on Gate 2a / 2b for that project.
 
 ## Plugin Structure
 
